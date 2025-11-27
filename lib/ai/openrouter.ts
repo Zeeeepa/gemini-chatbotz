@@ -11,12 +11,15 @@ export type OpenRouterModelId =
   | "anthropic/claude-3.5-sonnet"
   | "anthropic/claude-3-opus"
   | "anthropic/claude-3-haiku"
+  | "anthropic/claude-opus-4.5"
   | "google/gemini-2.0-flash-exp"
   | "google/gemini-pro-1.5"
+  | "google/gemini-3-pro-preview"
   | "meta-llama/llama-3.1-70b-instruct"
   | "meta-llama/llama-3.1-405b-instruct"
   | "mistralai/mistral-large"
-  | "deepseek/deepseek-chat";
+  | "deepseek/deepseek-chat"
+  | "x-ai/grok-4.1-fast:free";
 
 export interface ModelDefinition {
   id: OpenRouterModelId;
@@ -37,6 +40,36 @@ export interface ModelDefinition {
 }
 
 export const OPENROUTER_MODELS: ModelDefinition[] = [
+  {
+    id: "google/gemini-3-pro-preview",
+    name: "Gemini 3 Pro",
+    provider: "Google",
+    description: "Latest Gemini 3 Pro - most advanced reasoning",
+    contextLength: 1000000,
+    maxOutput: 65536,
+    pricing: { prompt: 0.00125, completion: 0.005 },
+    capabilities: { vision: true, functionCalling: true, streaming: true },
+  },
+  {
+    id: "anthropic/claude-opus-4.5",
+    name: "Claude Opus 4.5",
+    provider: "Anthropic",
+    description: "Most capable Claude model with extended thinking",
+    contextLength: 200000,
+    maxOutput: 32000,
+    pricing: { prompt: 0.015, completion: 0.075 },
+    capabilities: { vision: true, functionCalling: true, streaming: true },
+  },
+  {
+    id: "x-ai/grok-4.1-fast:free",
+    name: "Grok 4.1 Fast",
+    provider: "xAI",
+    description: "Free, fast Grok model from xAI",
+    contextLength: 131072,
+    maxOutput: 16384,
+    pricing: { prompt: 0.0, completion: 0.0 },
+    capabilities: { vision: true, functionCalling: true, streaming: true },
+  },
   {
     id: "openai/gpt-4o",
     name: "GPT-4o",
@@ -149,7 +182,7 @@ export const OPENROUTER_MODELS: ModelDefinition[] = [
   },
 ];
 
-export const DEFAULT_MODEL: OpenRouterModelId = "anthropic/claude-3.5-sonnet";
+export const DEFAULT_MODEL: OpenRouterModelId = "google/gemini-3-pro-preview";
 export const DEFAULT_FAST_MODEL: OpenRouterModelId = "openai/gpt-4o-mini";
 export const DEFAULT_ARTIFACT_MODEL: OpenRouterModelId = "anthropic/claude-3.5-sonnet";
 

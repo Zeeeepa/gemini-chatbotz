@@ -19,12 +19,15 @@ const modelValidator = v.optional(v.union(
   v.literal("anthropic/claude-3.5-sonnet"),
   v.literal("anthropic/claude-3-opus"),
   v.literal("anthropic/claude-3-haiku"),
+  v.literal("anthropic/claude-opus-4.5"),
   v.literal("google/gemini-2.0-flash-exp"),
   v.literal("google/gemini-pro-1.5"),
+  v.literal("google/gemini-3-pro-preview"),
   v.literal("meta-llama/llama-3.1-70b-instruct"),
   v.literal("meta-llama/llama-3.1-405b-instruct"),
   v.literal("mistralai/mistral-large"),
-  v.literal("deepseek/deepseek-chat")
+  v.literal("deepseek/deepseek-chat"),
+  v.literal("x-ai/grok-4.1-fast:free")
 ));
 
 function selectAgent(modelId?: string) {

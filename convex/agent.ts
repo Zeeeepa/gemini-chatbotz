@@ -17,12 +17,15 @@ type OpenRouterModelId =
   | "anthropic/claude-3.5-sonnet"
   | "anthropic/claude-3-opus"
   | "anthropic/claude-3-haiku"
+  | "anthropic/claude-opus-4.5"
   | "google/gemini-2.0-flash-exp"
   | "google/gemini-pro-1.5"
+  | "google/gemini-3-pro-preview"
   | "meta-llama/llama-3.1-70b-instruct"
   | "meta-llama/llama-3.1-405b-instruct"
   | "mistralai/mistral-large"
-  | "deepseek/deepseek-chat";
+  | "deepseek/deepseek-chat"
+  | "x-ai/grok-4.1-fast:free";
 
 const baseInstructions = `
   - You help users book flights!
@@ -266,7 +269,7 @@ export function createAgentWithModel(modelId: OpenRouterModelId) {
 
 export const flightAgent = new Agent(components.agent, {
   name: "Flight Booking Agent",
-  chat: openrouter("anthropic/claude-3.5-sonnet"),
+  chat: openrouter("google/gemini-3-pro-preview"),
   instructions: baseInstructions,
   tools: baseTools,
   maxSteps: 10,
