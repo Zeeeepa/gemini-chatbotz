@@ -1,0 +1,166 @@
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+
+export const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
+
+export type OpenRouterModelId = 
+  | "openai/gpt-4o"
+  | "openai/gpt-4o-mini"
+  | "openai/gpt-4-turbo"
+  | "anthropic/claude-3.5-sonnet"
+  | "anthropic/claude-3-opus"
+  | "anthropic/claude-3-haiku"
+  | "google/gemini-2.0-flash-exp"
+  | "google/gemini-pro-1.5"
+  | "meta-llama/llama-3.1-70b-instruct"
+  | "meta-llama/llama-3.1-405b-instruct"
+  | "mistralai/mistral-large"
+  | "deepseek/deepseek-chat";
+
+export interface ModelDefinition {
+  id: OpenRouterModelId;
+  name: string;
+  provider: string;
+  description: string;
+  contextLength: number;
+  maxOutput?: number;
+  pricing: {
+    prompt: number;
+    completion: number;
+  };
+  capabilities: {
+    vision?: boolean;
+    functionCalling?: boolean;
+    streaming?: boolean;
+  };
+}
+
+export const OPENROUTER_MODELS: ModelDefinition[] = [
+  {
+    id: "openai/gpt-4o",
+    name: "GPT-4o",
+    provider: "OpenAI",
+    description: "Most capable GPT-4 model with vision",
+    contextLength: 128000,
+    maxOutput: 4096,
+    pricing: { prompt: 0.005, completion: 0.015 },
+    capabilities: { vision: true, functionCalling: true, streaming: true },
+  },
+  {
+    id: "openai/gpt-4o-mini",
+    name: "GPT-4o Mini",
+    provider: "OpenAI",
+    description: "Fast and affordable GPT-4 variant",
+    contextLength: 128000,
+    maxOutput: 16384,
+    pricing: { prompt: 0.00015, completion: 0.0006 },
+    capabilities: { vision: true, functionCalling: true, streaming: true },
+  },
+  {
+    id: "anthropic/claude-3.5-sonnet",
+    name: "Claude 3.5 Sonnet",
+    provider: "Anthropic",
+    description: "Best balance of intelligence and speed",
+    contextLength: 200000,
+    maxOutput: 8192,
+    pricing: { prompt: 0.003, completion: 0.015 },
+    capabilities: { vision: true, functionCalling: true, streaming: true },
+  },
+  {
+    id: "anthropic/claude-3-opus",
+    name: "Claude 3 Opus",
+    provider: "Anthropic",
+    description: "Most powerful Claude model",
+    contextLength: 200000,
+    maxOutput: 4096,
+    pricing: { prompt: 0.015, completion: 0.075 },
+    capabilities: { vision: true, functionCalling: true, streaming: true },
+  },
+  {
+    id: "anthropic/claude-3-haiku",
+    name: "Claude 3 Haiku",
+    provider: "Anthropic",
+    description: "Fast and affordable Claude model",
+    contextLength: 200000,
+    maxOutput: 4096,
+    pricing: { prompt: 0.00025, completion: 0.00125 },
+    capabilities: { vision: true, functionCalling: true, streaming: true },
+  },
+  {
+    id: "google/gemini-2.0-flash-exp",
+    name: "Gemini 2.0 Flash",
+    provider: "Google",
+    description: "Latest Gemini model, fast and capable",
+    contextLength: 1000000,
+    maxOutput: 8192,
+    pricing: { prompt: 0.0, completion: 0.0 },
+    capabilities: { vision: true, functionCalling: true, streaming: true },
+  },
+  {
+    id: "google/gemini-pro-1.5",
+    name: "Gemini Pro 1.5",
+    provider: "Google",
+    description: "Advanced Gemini with long context",
+    contextLength: 2000000,
+    maxOutput: 8192,
+    pricing: { prompt: 0.00125, completion: 0.005 },
+    capabilities: { vision: true, functionCalling: true, streaming: true },
+  },
+  {
+    id: "meta-llama/llama-3.1-70b-instruct",
+    name: "Llama 3.1 70B",
+    provider: "Meta",
+    description: "Open source, highly capable",
+    contextLength: 131072,
+    maxOutput: 4096,
+    pricing: { prompt: 0.00052, completion: 0.00075 },
+    capabilities: { functionCalling: true, streaming: true },
+  },
+  {
+    id: "meta-llama/llama-3.1-405b-instruct",
+    name: "Llama 3.1 405B",
+    provider: "Meta",
+    description: "Largest open source model",
+    contextLength: 131072,
+    maxOutput: 4096,
+    pricing: { prompt: 0.003, completion: 0.003 },
+    capabilities: { functionCalling: true, streaming: true },
+  },
+  {
+    id: "mistralai/mistral-large",
+    name: "Mistral Large",
+    provider: "Mistral",
+    description: "Most capable Mistral model",
+    contextLength: 128000,
+    maxOutput: 4096,
+    pricing: { prompt: 0.003, completion: 0.009 },
+    capabilities: { functionCalling: true, streaming: true },
+  },
+  {
+    id: "deepseek/deepseek-chat",
+    name: "DeepSeek Chat",
+    provider: "DeepSeek",
+    description: "Efficient reasoning model",
+    contextLength: 64000,
+    maxOutput: 4096,
+    pricing: { prompt: 0.00014, completion: 0.00028 },
+    capabilities: { functionCalling: true, streaming: true },
+  },
+];
+
+export const DEFAULT_MODEL: OpenRouterModelId = "anthropic/claude-3.5-sonnet";
+export const DEFAULT_FAST_MODEL: OpenRouterModelId = "openai/gpt-4o-mini";
+export const DEFAULT_ARTIFACT_MODEL: OpenRouterModelId = "anthropic/claude-3.5-sonnet";
+
+export function getModelDefinition(modelId: OpenRouterModelId): ModelDefinition {
+  const model = OPENROUTER_MODELS.find((m) => m.id === modelId);
+  if (!model) {
+    throw new Error(`Model ${modelId} not found`);
+  }
+  return model;
+}
+
+export function getOpenRouterModel(modelId: OpenRouterModelId = DEFAULT_MODEL) {
+  return openrouter(modelId);
+}

@@ -1,13 +1,18 @@
 import { Agent, createTool } from "@convex-dev/agent";
-import { google } from "@ai-sdk/google";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { components } from "./_generated/api";
 import { z } from "zod";
 import { internal } from "./_generated/api";
-import { ActionCtx } from "./_generated/server";
+
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
+
+const artifactKinds = ["text", "code", "sheet"] as const;
 
 export const flightAgent = new Agent(components.agent, {
   name: "Flight Booking Agent",
-  chat: google("gemini-2.5-pro-preview-06-05"),
+  chat: openrouter("anthropic/claude-3.5-sonnet"),
   instructions: `
     - You help users book flights!
     - Keep your responses limited to a sentence.
@@ -163,13 +168,160 @@ export const flightAgent = new Agent(components.agent, {
         return boardingPass;
       },
     }),
+    createDocument: createTool({
+      description: `Create a persistent document (text, code, or spreadsheet). Use for:
+- Substantial content (>100 lines), code, or spreadsheets
+- Deliverables the user will likely save/reuse (emails, essays, code, etc.)
+- Explicit "create a document" like requests
+- For code artifacts, title MUST include file extension (e.g., "script.py", "component.tsx")`,
+      args: z.object({
+        title: z.string().describe('Document title. For code, include extension (e.g., "script.py", "App.tsx")'),
+        description: z.string().describe("Detailed description of what the document should contain"),
+        kind: z.enum(artifactKinds).describe("Type of document: text, code, or sheet"),
+        content: z.string().describe("The actual content of the document"),
+      }),
+      handler: async (_ctx, { title, kind, content }) => {
+        const id = crypto.randomUUID();
+        return {
+          id,
+          title,
+          kind,
+          content,
+          message: "Document created and displayed to user.",
+        };
+      },
+    }),
+    updateDocument: createTool({
+      description: "Update an existing document with new content or modifications",
+      args: z.object({
+        id: z.string().describe("ID of the document to update"),
+        description: z.string().describe("Description of the changes to make"),
+        content: z.string().describe("The updated content"),
+      }),
+      handler: async (_ctx, { id, content }) => {
+        return {
+          id,
+          content,
+          message: "Document updated successfully.",
+        };
+      },
+    }),
+    generateImage: createTool({
+      description: "Generate an image based on a text prompt using AI",
+      args: z.object({
+        prompt: z.string().describe("Detailed description of the image to generate"),
+        style: z.enum(["realistic", "artistic", "cartoon", "sketch"]).optional().describe("Style of the generated image"),
+      }),
+      handler: async (_ctx, { prompt, style }) => {
+        return {
+          prompt,
+          style: style || "realistic",
+          message: "Image generation requested. (Feature requires additional setup)",
+        };
+      },
+    }),
+    webSearch: createTool({
+      description: "Search the web for current information",
+      args: z.object({
+        query: z.string().describe("Search query"),
+      }),
+      handler: async (_ctx, { query }) => {
+        return {
+          query,
+          message: "Web search functionality available via external integration.",
+          results: [],
+        };
+      },
+    }),
   },
   maxSteps: 10,
 });
 
+export const codeAgent = new Agent(components.agent, {
+  name: "Code Assistant",
+  chat: openrouter("anthropic/claude-3.5-sonnet"),
+  instructions: `You are an expert coding assistant. You help users write, debug, and understand code.
+  
+When creating code:
+- Always use the createDocument tool for code longer than a few lines
+- Include the file extension in the title (e.g., "component.tsx", "utils.py")
+- Write clean, well-structured code following best practices
+- Add comments for complex logic
+
+When explaining code:
+- Be clear and concise
+- Use examples when helpful
+- Break down complex concepts
+
+Available artifact kinds: text, code, sheet`,
+  tools: {
+    createDocument: createTool({
+      description: `Create a code file or document. For code, include file extension in title.`,
+      args: z.object({
+        title: z.string().describe('Title with extension (e.g., "App.tsx", "utils.py")'),
+        description: z.string().describe("What the code does"),
+        kind: z.enum(artifactKinds),
+        content: z.string().describe("The code content"),
+      }),
+      handler: async (_ctx, { title, kind, content }) => {
+        const id = crypto.randomUUID();
+        return { id, title, kind, content };
+      },
+    }),
+    updateDocument: createTool({
+      description: "Update existing code or document",
+      args: z.object({
+        id: z.string().describe("Document ID"),
+        description: z.string().describe("Changes to make"),
+        content: z.string().describe("Updated content"),
+      }),
+      handler: async (_ctx, { id, content }) => {
+        return { id, content, updated: true };
+      },
+    }),
+  },
+  maxSteps: 5,
+});
+
 export const quickAgent = new Agent(components.agent, {
   name: "Quick Agent",
-  chat: google("gemini-2.5-flash-preview-05-20"),
-  instructions: "You are a helpful assistant.",
+  chat: openrouter("openai/gpt-4o-mini"),
+  instructions: "You are a helpful assistant. Keep responses concise but informative.",
   maxSteps: 5,
+});
+
+export const researchAgent = new Agent(components.agent, {
+  name: "Research Agent",
+  chat: openrouter("anthropic/claude-3.5-sonnet"),
+  instructions: `You are a research assistant. Help users find and synthesize information.
+  
+- Provide comprehensive, well-sourced answers
+- Break down complex topics into understandable parts
+- Cite sources when available
+- Suggest follow-up questions`,
+  tools: {
+    webSearch: createTool({
+      description: "Search the web for information",
+      args: z.object({
+        query: z.string().describe("Search query"),
+      }),
+      handler: async (_ctx, { query }) => {
+        return { query, results: [] };
+      },
+    }),
+    createDocument: createTool({
+      description: "Create a research document or summary",
+      args: z.object({
+        title: z.string(),
+        description: z.string(),
+        kind: z.enum(artifactKinds),
+        content: z.string(),
+      }),
+      handler: async (_ctx, { title, kind, content }) => {
+        const id = crypto.randomUUID();
+        return { id, title, kind, content };
+      },
+    }),
+  },
+  maxSteps: 8,
 });
