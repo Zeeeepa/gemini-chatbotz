@@ -1,39 +1,63 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Settings, Mic, PlusCircle, Sparkles, CornerDownLeft, Loader2, StopCircle } from "lucide-react";
+import { Settings, Mic, PlusCircle, Sparkles, CornerDownLeft, StopCircle, ChevronDown, Check, Zap, Brain, Gauge } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { OPENROUTER_MODELS, type OpenRouterModelId, type ModelDefinition } from "@/lib/ai/openrouter";
 
 type PromptInputProps = {
-  onSubmit: (value: string, attachments?: File[]) => void;
+  onSubmit: (value: string, attachments?: File[], modelId?: OpenRouterModelId) => void;
   onStop?: () => void;
   isLoading?: boolean;
-  onModelChange?: () => void;
   placeholder?: string;
   className?: string;
-  modelName?: string;
+  selectedModel?: OpenRouterModelId;
+  onModelChange?: (modelId: OpenRouterModelId) => void;
 };
+
+function ModelIcon({ provider }: { provider: string }) {
+  switch (provider) {
+    case "OpenAI":
+      return <div className="w-4 h-4 rounded bg-emerald-500 flex items-center justify-center text-[9px] font-bold text-white">AI</div>;
+    case "Anthropic":
+      return <div className="w-4 h-4 rounded bg-orange-500 flex items-center justify-center text-[9px] font-bold text-white">A</div>;
+    case "Google":
+      return <div className="w-4 h-4 rounded bg-blue-500 flex items-center justify-center text-[9px] font-bold text-white">G</div>;
+    case "Meta":
+      return <div className="w-4 h-4 rounded bg-blue-600 flex items-center justify-center text-[9px] font-bold text-white">M</div>;
+    case "Mistral":
+      return <div className="w-4 h-4 rounded bg-violet-500 flex items-center justify-center text-[9px] font-bold text-white">MI</div>;
+    case "DeepSeek":
+      return <div className="w-4 h-4 rounded bg-cyan-500 flex items-center justify-center text-[9px] font-bold text-white">D</div>;
+    default:
+      return <Brain className="w-4 h-4" />;
+  }
+}
 
 export const PromptInput = ({
   onSubmit,
   onStop,
   isLoading = false,
-  onModelChange,
   placeholder = "Describe your idea",
   className = "",
-  modelName = "Gemini 2.5 Pro",
+  selectedModel = "anthropic/claude-3.5-sonnet",
+  onModelChange,
 }: PromptInputProps) => {
   const [value, setValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
   
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+
+  const currentModel = OPENROUTER_MODELS.find(m => m.id === selectedModel) || OPENROUTER_MODELS[2];
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -42,16 +66,26 @@ export const PromptInput = ({
     }
   }, [value]);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (modelMenuRef.current && !modelMenuRef.current.contains(event.target as Node)) {
+        setIsModelMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleSubmit = useCallback(() => {
     if (value.trim() && !isLoading) {
-      onSubmit(value, attachments.length > 0 ? attachments : undefined);
+      onSubmit(value, attachments.length > 0 ? attachments : undefined, selectedModel);
       setValue("");
       setAttachments([]);
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
     }
-  }, [value, isLoading, onSubmit, attachments]);
+  }, [value, isLoading, onSubmit, attachments, selectedModel]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -91,10 +125,23 @@ export const PromptInput = ({
       "What's the weather like for traveling to Tokyo?",
       "Find me flights to London next week",
       "I need to fly from LA to Miami tomorrow",
+      "Create a Python script that scrapes web data",
+      "Write a React component for a todo list",
     ];
     const randomPrompt = luckyPrompts[Math.floor(Math.random() * luckyPrompts.length)];
     setValue(randomPrompt);
   }, []);
+
+  const handleModelSelect = (modelId: OpenRouterModelId) => {
+    onModelChange?.(modelId);
+    setIsModelMenuOpen(false);
+  };
+
+  const groupedModels = OPENROUTER_MODELS.reduce((acc, model) => {
+    if (!acc[model.provider]) acc[model.provider] = [];
+    acc[model.provider].push(model);
+    return acc;
+  }, {} as Record<string, ModelDefinition[]>);
 
   return (
     <div className={`relative w-full max-w-[858px] mx-auto font-sans ${className}`}>
@@ -149,16 +196,73 @@ export const PromptInput = ({
           />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={onModelChange}
-            className="flex items-center gap-1.5 px-3 py-1.5 h-8 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-700 hover:text-gray-900 dark:hover:text-white transition-colors shadow-sm"
-          >
-            <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            <span>
-              Model: <span className="text-gray-900 dark:text-white">{modelName}</span>
-            </span>
-          </button>
+          <div className="relative" ref={modelMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 h-8 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-700 hover:text-gray-900 dark:hover:text-white transition-colors shadow-sm"
+            >
+              <ModelIcon provider={currentModel.provider} />
+              <span className="hidden sm:inline">
+                <span className="text-gray-900 dark:text-white">{currentModel.name}</span>
+              </span>
+              <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isModelMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isModelMenuOpen && (
+              <div className="absolute bottom-full left-0 mb-2 w-80 max-h-[400px] overflow-y-auto bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-lg z-50">
+                <div className="p-2">
+                  {Object.entries(groupedModels).map(([provider, models]) => (
+                    <div key={provider} className="mb-2 last:mb-0">
+                      <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        {provider}
+                      </div>
+                      {models.map((model) => (
+                        <button
+                          key={model.id}
+                          onClick={() => handleModelSelect(model.id)}
+                          className={`w-full flex items-start gap-3 p-2 rounded-lg text-left transition-colors ${
+                            selectedModel === model.id
+                              ? 'bg-blue-50 dark:bg-blue-900/30'
+                              : 'hover:bg-gray-50 dark:hover:bg-zinc-800'
+                          }`}
+                        >
+                          <ModelIcon provider={model.provider} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                {model.name}
+                              </span>
+                              {selectedModel === model.id && (
+                                <Check className="w-3.5 h-3.5 text-blue-600" />
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              {model.description}
+                            </p>
+                            <div className="flex items-center gap-3 mt-1">
+                              {model.capabilities.vision && (
+                                <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                                  <Zap className="w-3 h-3" /> Vision
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                                <Gauge className="w-3 h-3" /> {(model.contextLength / 1000).toFixed(0)}K ctx
+                              </span>
+                              {model.pricing.prompt > 0 && (
+                                <span className="text-[10px] text-gray-400">
+                                  ${model.pricing.prompt}/1K
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2 ml-auto">
             <button
               type="button"

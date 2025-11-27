@@ -8,6 +8,7 @@ import { Message as PreviewMessage } from "@/components/custom/message";
 import { useScrollToBottom } from "@/components/custom/use-scroll-to-bottom";
 import { PromptInput } from "./prompt-input";
 import { Overview } from "./overview";
+import { DEFAULT_MODEL, type OpenRouterModelId } from "@/lib/ai/openrouter";
 
 export function Chat({
   id,
@@ -21,6 +22,7 @@ export function Chat({
   const [threadId, setThreadId] = useState<string | null>(id || null);
   const [isLoading, setIsLoading] = useState(false);
   const [localMessages, setLocalMessages] = useState<UIMessage[]>([]);
+  const [selectedModel, setSelectedModel] = useState<OpenRouterModelId>(DEFAULT_MODEL);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const createThread = useAction(api.chat.createNewThread);
@@ -37,7 +39,7 @@ export function Chat({
   const allMessages = threadId ? messages : localMessages;
 
   const handleSubmit = useCallback(
-    async (value: string, attachments?: File[]) => {
+    async (value: string, attachments?: File[], modelId?: OpenRouterModelId) => {
       if (!value.trim()) return;
 
       setIsLoading(true);
@@ -58,6 +60,7 @@ export function Chat({
           threadId: currentThreadId,
           prompt: value,
           userId,
+          modelId: modelId || selectedModel,
         });
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
@@ -68,7 +71,7 @@ export function Chat({
         abortControllerRef.current = null;
       }
     },
-    [threadId, createThread, sendMessage, userId]
+    [threadId, createThread, sendMessage, userId, selectedModel]
   );
 
   const handleStop = useCallback(() => {
@@ -76,6 +79,10 @@ export function Chat({
       abortControllerRef.current.abort();
       setIsLoading(false);
     }
+  }, []);
+
+  const handleModelChange = useCallback((modelId: OpenRouterModelId) => {
+    setSelectedModel(modelId);
   }, []);
 
   useEffect(() => {
@@ -121,8 +128,9 @@ export function Chat({
             onSubmit={handleSubmit}
             onStop={handleStop}
             isLoading={isLoading}
-            placeholder="Ask about flights, weather, or anything..."
-            modelName="Gemini 2.5 Pro"
+            placeholder="Ask about flights, weather, code, or anything..."
+            selectedModel={selectedModel}
+            onModelChange={handleModelChange}
           />
         </div>
       </div>

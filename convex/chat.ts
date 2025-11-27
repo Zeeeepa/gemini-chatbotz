@@ -2,7 +2,7 @@
 
 import { action, mutation, query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { flightAgent } from "./agent";
+import { flightAgent, codeAgent, quickAgent, researchAgent, createAgentWithModel } from "./agent";
 import { components, internal, api } from "./_generated/api";
 import { paginationOptsValidator } from "convex/server";
 import {
@@ -12,12 +12,35 @@ import {
   createThread,
 } from "@convex-dev/agent";
 
+const modelValidator = v.optional(v.union(
+  v.literal("openai/gpt-4o"),
+  v.literal("openai/gpt-4o-mini"),
+  v.literal("openai/gpt-4-turbo"),
+  v.literal("anthropic/claude-3.5-sonnet"),
+  v.literal("anthropic/claude-3-opus"),
+  v.literal("anthropic/claude-3-haiku"),
+  v.literal("google/gemini-2.0-flash-exp"),
+  v.literal("google/gemini-pro-1.5"),
+  v.literal("meta-llama/llama-3.1-70b-instruct"),
+  v.literal("meta-llama/llama-3.1-405b-instruct"),
+  v.literal("mistralai/mistral-large"),
+  v.literal("deepseek/deepseek-chat")
+));
+
+function selectAgent(modelId?: string) {
+  if (!modelId) return flightAgent;
+  if (modelId.includes("gpt-4o-mini")) return quickAgent;
+  return flightAgent;
+}
+
 export const createNewThread = action({
   args: {
     userId: v.optional(v.string()),
+    modelId: modelValidator,
   },
-  handler: async (ctx, { userId }) => {
-    const { threadId } = await flightAgent.createThread(ctx, {
+  handler: async (ctx, { userId, modelId }) => {
+    const agent = selectAgent(modelId);
+    const { threadId } = await agent.createThread(ctx, {
       userId: userId ?? "anonymous",
     });
     if (userId) {
@@ -98,9 +121,11 @@ export const sendMessage = action({
     threadId: v.string(),
     prompt: v.string(),
     userId: v.optional(v.string()),
+    modelId: modelValidator,
   },
-  handler: async (ctx, { threadId, prompt, userId }) => {
-    const { thread } = await flightAgent.continueThread(ctx, { threadId });
+  handler: async (ctx, { threadId, prompt, userId, modelId }) => {
+    const agent = modelId ? createAgentWithModel(modelId) : flightAgent;
+    const { thread } = await agent.continueThread(ctx, { threadId });
     const result = await thread.generateText(
       { prompt },
       { saveStreamDeltas: true }
@@ -124,9 +149,11 @@ export const streamMessage = action({
     threadId: v.string(),
     prompt: v.string(),
     userId: v.optional(v.string()),
+    modelId: modelValidator,
   },
-  handler: async (ctx, { threadId, prompt, userId }) => {
-    const { thread } = await flightAgent.continueThread(ctx, { threadId });
+  handler: async (ctx, { threadId, prompt, userId, modelId }) => {
+    const agent = modelId ? createAgentWithModel(modelId) : flightAgent;
+    const { thread } = await agent.continueThread(ctx, { threadId });
     const result = await thread.generateText(
       { prompt },
       { saveStreamDeltas: { throttleMs: 100 } }
