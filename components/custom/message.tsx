@@ -1,22 +1,31 @@
 "use client";
 
-import { Attachment, ToolInvocation } from "ai";
 import { motion } from "framer-motion";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
+import { memo } from "react";
+import { Streamdown } from "streamdown";
 
 import { BotIcon, UserIcon } from "./icons";
-import { Markdown } from "./markdown";
 import { PreviewAttachment } from "./preview-attachment";
 import { ToolView } from "./tool-views";
+import { Reasoning, ReasoningTrigger, ReasoningContent } from "../ai-elements/reasoning";
+import { StreamingIndicator } from "../ai-elements/thinking-message";
 
-type MessageToolInvocation = ToolInvocation | {
-  type: "tool-invocation";
+// Types for attachments and tool invocations
+interface MessageAttachment {
+  url: string;
+  name?: string;
+  contentType?: string;
+}
+
+interface MessageToolInvocation {
+  type?: "tool-invocation";
   toolName: string;
   toolCallId: string;
   state: string;
-  args?: any;
-  result?: any;
-};
+  args?: Record<string, unknown>;
+  result?: unknown;
+}
 
 function getToolStatus(state: string): "pending" | "running" | "complete" | "error" {
   switch (state) {
@@ -30,18 +39,21 @@ function getToolStatus(state: string): "pending" | "running" | "complete" | "err
   }
 }
 
-export const Message = ({
-  chatId,
+export const Message = memo(({
   role,
   content,
   toolInvocations,
   attachments,
+  reasoning,
+  isStreaming = false,
 }: {
-  chatId: string;
+  chatId?: string;
   role: string;
   content: string | ReactNode;
   toolInvocations: Array<MessageToolInvocation> | undefined;
-  attachments?: Array<Attachment>;
+  attachments?: Array<MessageAttachment>;
+  reasoning?: string;
+  isStreaming?: boolean;
 }) => {
   return (
     <motion.div
@@ -54,12 +66,23 @@ export const Message = ({
       </div>
 
       <div className="flex flex-col gap-2 w-full">
+        {/* Reasoning/Thinking section */}
+        {reasoning && (
+          <Reasoning isStreaming={isStreaming} defaultOpen={isStreaming}>
+            <ReasoningTrigger />
+            <ReasoningContent>{reasoning}</ReasoningContent>
+          </Reasoning>
+        )}
+
+        {/* Main content with streaming support */}
         {content && typeof content === "string" && (
-          <div className="text-zinc-800 dark:text-zinc-300 flex flex-col gap-4">
-            <Markdown>{content}</Markdown>
+          <div className="text-zinc-800 dark:text-zinc-300 flex flex-col gap-4 prose prose-sm dark:prose-invert max-w-none">
+            <Streamdown>{content}</Streamdown>
+            {isStreaming && <StreamingIndicator />}
           </div>
         )}
 
+        {/* Tool invocations */}
         {toolInvocations && toolInvocations.length > 0 && (
           <div className="flex flex-col gap-4">
             {toolInvocations.map((toolInvocation) => {
@@ -81,6 +104,7 @@ export const Message = ({
           </div>
         )}
 
+        {/* Attachments */}
         {attachments && attachments.length > 0 && (
           <div className="flex flex-row gap-2">
             {attachments.map((attachment) => (
@@ -91,4 +115,4 @@ export const Message = ({
       </div>
     </motion.div>
   );
-};
+});

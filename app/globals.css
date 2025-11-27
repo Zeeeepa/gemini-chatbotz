@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Streamdown styles for real-time markdown streaming */
+@source "../node_modules/streamdown/dist/index.js";
+
 :root {
     --foreground-rgb: 0, 0, 0;
     --background-start-rgb: 214, 219, 220;

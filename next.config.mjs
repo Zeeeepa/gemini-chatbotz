@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {},
+  serverExternalPackages: [],
+  transpilePackages: ['streamdown', 'shiki'],
   images: {
     remotePatterns: [],
   },
