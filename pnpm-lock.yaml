@@ -18,8 +18,8 @@ importers:
         specifier: ^0.3.1
         version: 0.3.1(@ai-sdk/provider-utils@3.0.17(zod@3.25.76))(ai@5.0.102(zod@3.25.76))(convex-helpers@0.1.106(@standard-schema/spec@1.0.0)(convex@1.29.3(react@19.0.0-rc-7771d3a7-20240827))(react@19.0.0-rc-7771d3a7-20240827)(typescript@5.9.3)(zod@3.25.76))(convex@1.29.3(react@19.0.0-rc-7771d3a7-20240827))(react@19.0.0-rc-7771d3a7-20240827)
       '@openrouter/ai-sdk-provider':
-        specifier: ^1.2.7
-        version: 1.2.7(ai@5.0.102(zod@3.25.76))(zod@3.25.76)
+        specifier: 1.2.0
+        version: 1.2.0(ai@5.0.102(zod@3.25.76))(zod@3.25.76)
       '@radix-ui/react-alert-dialog':
         specifier: ^1.1.2
         version: 1.1.15(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@19.0.0-rc-7771d3a7-20240827(react@19.0.0-rc-7771d3a7-20240827))(react@19.0.0-rc-7771d3a7-20240827)
@@ -98,6 +98,9 @@ importers:
       convex:
         specifier: ^1.29.3
         version: 1.29.3(react@19.0.0-rc-7771d3a7-20240827)
+      convex-helpers:
+        specifier: ^0.1.106
+        version: 0.1.106(@standard-schema/spec@1.0.0)(convex@1.29.3(react@19.0.0-rc-7771d3a7-20240827))(react@19.0.0-rc-7771d3a7-20240827)(typescript@5.9.3)(zod@3.25.76)
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
@@ -222,6 +225,9 @@ importers:
       eslint-plugin-import:
         specifier: ^2.31.0
         version: 2.32.0(@typescript-eslint/parser@7.2.0(eslint@8.57.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)
+      playwright:
+        specifier: ^1.57.0
+        version: 1.57.0
       postcss:
         specifier: ^8
         version: 8.5.6
@@ -1199,15 +1205,12 @@ packages:
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
 
-  '@openrouter/ai-sdk-provider@1.2.7':
-    resolution: {integrity: sha512-Ra9/93QJ7nKheFlB9ZbiTgpDYeEUA7AuOLqjUIzidKVcVWm4wbHmOOBU5y4rIUgQ1wQNfwRsBPDtGyVMTPeyBg==}
+  '@openrouter/ai-sdk-provider@1.2.0':
+    resolution: {integrity: sha512-stuIwq7Yb7DNmk3GuCtz+oS3nZOY4TXEV3V5KsknDGQN7Fpu3KRMQVWRc1J073xKdf0FC9EHOctSyzsACmp5Ag==}
     engines: {node: '>=18'}
     peerDependencies:
       ai: ^5.0.0
       zod: ^3.24.1 || ^v4
-
-  '@openrouter/sdk@0.1.27':
-    resolution: {integrity: sha512-RH//L10bSmc81q25zAZudiI4kNkLgxF2E+WU42vghp3N6TEvZ6F0jK7uT3tOxkEn91gzmMw9YVmDENy7SJsajQ==}
 
   '@opentelemetry/api@1.9.0':
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
@@ -3096,6 +3099,11 @@ packages:
   fs.realpath@1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
 
+  fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -4044,6 +4052,16 @@ packages:
 
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
+
+  playwright-core@1.57.0:
+    resolution: {integrity: sha512-agTcKlMw/mjBWOnD6kFZttAAGHgi/Nw0CZ2o6JqWSbMlI219lAFLZZCyqByTsvVAJq5XA5H8cA6PrvBRpBWEuQ==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.57.0:
+    resolution: {integrity: sha512-ilYQj1s8sr2ppEJ2YVadYBN0Mb3mdo9J0wQ+UuDhzYqURwSoW4n1Xs5vs7ORwgDGmyEh33tRMeS8KhdkMoLXQw==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   points-on-curve@0.2.0:
     resolution: {integrity: sha512-0mYKnYYe9ZcqMCWhUjItv/oHjvgEsfKvnUTg8sAtnHr3GVy7rGkXCb6d5cSyqrWqL4k81b9CPg3urd+T7aop3A==}
@@ -5487,14 +5505,9 @@ snapshots:
 
   '@nolyfill/is-core-module@1.0.39': {}
 
-  '@openrouter/ai-sdk-provider@1.2.7(ai@5.0.102(zod@3.25.76))(zod@3.25.76)':
+  '@openrouter/ai-sdk-provider@1.2.0(ai@5.0.102(zod@3.25.76))(zod@3.25.76)':
     dependencies:
-      '@openrouter/sdk': 0.1.27
       ai: 5.0.102(zod@3.25.76)
-      zod: 3.25.76
-
-  '@openrouter/sdk@0.1.27':
-    dependencies:
       zod: 3.25.76
 
   '@opentelemetry/api@1.9.0': {}
@@ -7581,6 +7594,9 @@ snapshots:
 
   fs.realpath@1.0.0: {}
 
+  fsevents@2.3.2:
+    optional: true
+
   fsevents@2.3.3:
     optional: true
 
@@ -8850,6 +8866,14 @@ snapshots:
       confbox: 0.2.2
       exsolve: 1.0.8
       pathe: 2.0.3
+
+  playwright-core@1.57.0: {}
+
+  playwright@1.57.0:
+    dependencies:
+      playwright-core: 1.57.0
+    optionalDependencies:
+      fsevents: 2.3.2
 
   points-on-curve@0.2.0: {}
 
