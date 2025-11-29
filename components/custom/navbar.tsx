@@ -29,10 +29,10 @@ export const Navbar = async () => {
               width={20}
               alt="gemini logo"
             />
-            <div className="text-zinc-500">
+            <div className="text-chocolate-500">
               <SlashIcon size={16} />
             </div>
-            <div className="text-sm dark:text-zinc-300 truncate w-28 md:w-fit font-medium tracking-tight">
+            <div className="text-sm dark:text-chocolate-300 truncate w-28 md:w-fit font-medium tracking-tight">
               Opulent Chatbot
             </div>
           </div>

@@ -16,7 +16,7 @@ export function ThinkingMessage({ className }: { className?: string }) {
     >
       <div className="flex items-center gap-1.5">
         <motion.div
-          className="size-2 rounded-full bg-violet-500"
+          className="size-2 rounded-full bg-chocolate-500"
           animate={{
             scale: [1, 1.2, 1],
             opacity: [0.5, 1, 0.5],
@@ -28,7 +28,7 @@ export function ThinkingMessage({ className }: { className?: string }) {
           }}
         />
         <motion.div
-          className="size-2 rounded-full bg-violet-500"
+          className="size-2 rounded-full bg-chocolate-500"
           animate={{
             scale: [1, 1.2, 1],
             opacity: [0.5, 1, 0.5],
@@ -40,7 +40,7 @@ export function ThinkingMessage({ className }: { className?: string }) {
           }}
         />
         <motion.div
-          className="size-2 rounded-full bg-violet-500"
+          className="size-2 rounded-full bg-chocolate-500"
           animate={{
             scale: [1, 1.2, 1],
             opacity: [0.5, 1, 0.5],
@@ -61,7 +61,7 @@ export function StreamingIndicator({ className }: { className?: string }) {
   return (
     <motion.span
       className={cn(
-        "inline-block w-2 h-4 bg-violet-500 rounded-sm ml-0.5",
+        "inline-block w-2 h-4 bg-chocolate-500 rounded-sm ml-0.5",
         className
       )}
       animate={{ opacity: [1, 0] }}

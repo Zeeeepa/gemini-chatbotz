@@ -10,9 +10,9 @@ export const Overview = () => {
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ delay: 0.5 }}
     >
-      <div className="border-none bg-muted/50 rounded-2xl p-6 flex flex-col gap-4 text-zinc-500 text-sm dark:text-zinc-400 dark:border-zinc-700">
-        <p className="flex flex-row justify-center gap-4 items-center text-zinc-900 dark:text-zinc-50">
-          <span className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+      <div className="border-none bg-muted/50 rounded-2xl p-6 flex flex-col gap-4 text-chocolate-500 text-sm dark:text-chocolate-400 dark:border-chocolate-700">
+        <p className="flex flex-row justify-center gap-4 items-center text-chocolate-900 dark:text-chocolate-50">
+          <span className="text-2xl font-bold bg-gradient-to-r from-chocolate-600 to-chocolate-800 bg-clip-text text-transparent">
             Opulent
           </span>
         </p>

@@ -76,7 +76,7 @@ export const Message = memo(({
       initial={{ y: 5, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
     >
-      <div className="size-[24px] border rounded-sm p-1 flex flex-col justify-center items-center shrink-0 text-zinc-500">
+      <div className="size-[24px] border rounded-sm p-1 flex flex-col justify-center items-center shrink-0 text-chocolate-500">
         {role === "assistant" ? <BotIcon /> : <UserIcon />}
       </div>
 
@@ -91,7 +91,7 @@ export const Message = memo(({
 
         {/* Main content with streaming support */}
         {content && typeof content === "string" && (
-          <div className="text-zinc-800 dark:text-zinc-300 flex flex-col gap-4 prose prose-sm dark:prose-invert max-w-none">
+          <div className="text-chocolate-800 dark:text-chocolate-300 flex flex-col gap-4 prose prose-sm dark:prose-invert max-w-none">
             <Streamdown>{content}</Streamdown>
             {isStreaming && <StreamingIndicator />}
           </div>

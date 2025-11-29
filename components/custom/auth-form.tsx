@@ -15,7 +15,7 @@ export function AuthForm({
       <div className="flex flex-col gap-2">
         <Label
           htmlFor="email"
-          className="text-zinc-600 font-normal dark:text-zinc-400"
+          className="text-chocolate-600 font-normal dark:text-chocolate-400"
         >
           Email Address
         </Label>
@@ -33,7 +33,7 @@ export function AuthForm({
 
         <Label
           htmlFor="password"
-          className="text-zinc-600 font-normal dark:text-zinc-400"
+          className="text-chocolate-600 font-normal dark:text-chocolate-400"
         >
           Password
         </Label>
