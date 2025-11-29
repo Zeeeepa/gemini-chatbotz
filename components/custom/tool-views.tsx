@@ -238,6 +238,30 @@ function ImageGenerationView({ args, isLoading }: { args: Record<string, unknown
   );
 }
 
+function DocumentView({ args, result, isLoading }: { args: Record<string, unknown>; result?: Record<string, unknown>; isLoading: boolean }) {
+  const title = (args.title as string) || "Untitled Document";
+  const kind = (args.kind as string) || "text";
+  
+  return (
+    <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-chocolate-600 dark:text-chocolate-400">
+        <FileText className="w-5 h-5" />
+        <span className="font-medium">{args.id ? "Updating" : "Creating"} Document</span>
+      </div>
+      <div className="text-sm space-y-1">
+        <p className="font-medium text-chocolate-800 dark:text-chocolate-200">{title}</p>
+        <p className="text-chocolate-500 text-xs uppercase">{kind}</p>
+      </div>
+      {isLoading && <LoadingBar />}
+      {result && (result as { id?: string }).id && (
+        <div className="text-xs text-chocolate-500">
+          Document ID: {(result as { id: string }).id}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WebSearchView({ args, result, isLoading }: { args: Record<string, unknown>; result?: Record<string, unknown>; isLoading: boolean }) {
   // Tavily search response format
   const tavilyResult = result as { 
