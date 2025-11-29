@@ -16,11 +16,38 @@ import {
   ChevronRight,
   Play,
   Loader2,
+  Code,
+  Eye,
+  Terminal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useArtifact, type UIArtifact } from "@/hooks/use-artifact";
 import { getLanguageFromTitle, type ArtifactKind } from "@/lib/artifacts/types";
+
+// Kibo UI Components
+import {
+  CodeBlock,
+  CodeBlockHeader,
+  CodeBlockBody,
+  CodeBlockItem,
+  CodeBlockContent,
+  CodeBlockCopyButton,
+  type BundledLanguage,
+} from "@/components/kibo-ui/code-block";
+import {
+  SandboxProvider,
+  SandboxLayout,
+  SandboxTabs,
+  SandboxTabsList,
+  SandboxTabsTrigger,
+  SandboxTabsContent,
+  SandboxCodeEditor,
+  SandboxPreview,
+  SandboxConsole,
+  SandboxFileExplorer,
+} from "@/components/kibo-ui/sandbox";
+import { Spinner } from "@/components/kibo-ui/spinner";
 
 // Artifact UI Components
 function KindIcon({ kind, className }: { kind: ArtifactKind; className?: string }) {
@@ -37,29 +64,29 @@ function KindIcon({ kind, className }: { kind: ArtifactKind; className?: string 
 // Sheet Renderer
 function SheetRenderer({ content }: { content: string }) {
   const lines = content.split("\n").filter((line) => line.trim());
-  if (lines.length === 0) return <p className="text-gray-500">Empty spreadsheet</p>;
+  if (lines.length === 0) return <p className="text-chocolate-500">Empty spreadsheet</p>;
   const rows = lines.map((line) => line.split(",").map((cell) => cell.trim()));
   
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-chocolate-200 dark:divide-chocolate-700 border border-chocolate-200 dark:border-chocolate-700 rounded-lg">
+        <thead className="bg-chocolate-50 dark:bg-chocolate-900">
           <tr>
             {rows[0]?.map((cell, i) => (
               <th
                 key={i}
-                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r last:border-r-0"
+                className="px-4 py-2 text-left text-xs font-medium text-chocolate-500 uppercase tracking-wider border-r border-chocolate-200 dark:border-chocolate-700 last:border-r-0"
               >
                 {cell}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white dark:bg-chocolate-950 divide-y divide-chocolate-200 dark:divide-chocolate-800">
           {rows.slice(1).map((row, rowIndex) => (
-            <tr key={rowIndex} className="hover:bg-gray-50">
+            <tr key={rowIndex} className="hover:bg-chocolate-50 dark:hover:bg-chocolate-900">
               {row.map((cell, cellIndex) => (
-                <td key={cellIndex} className="px-4 py-2 text-sm text-gray-900 border-r last:border-r-0">
+                <td key={cellIndex} className="px-4 py-2 text-sm text-chocolate-900 dark:text-chocolate-100 border-r border-chocolate-200 dark:border-chocolate-700 last:border-r-0">
                   {cell}
                 </td>
               ))}
@@ -71,25 +98,73 @@ function SheetRenderer({ content }: { content: string }) {
   );
 }
 
-// Code Editor Component
+// Map language string to Shiki BundledLanguage
+function mapToShikiLanguage(lang: string): BundledLanguage {
+  const langMap: Record<string, BundledLanguage> = {
+    javascript: "javascript",
+    js: "javascript",
+    typescript: "typescript",
+    ts: "typescript",
+    python: "python",
+    py: "python",
+    html: "html",
+    css: "css",
+    json: "json",
+    markdown: "markdown",
+    md: "markdown",
+    bash: "bash",
+    shell: "bash",
+    sh: "bash",
+    sql: "sql",
+    yaml: "yaml",
+    yml: "yaml",
+    tsx: "tsx",
+    jsx: "jsx",
+    go: "go",
+    rust: "rust",
+    java: "java",
+    cpp: "cpp",
+    c: "c",
+    csharp: "csharp",
+    php: "php",
+    ruby: "ruby",
+    swift: "swift",
+    kotlin: "kotlin",
+  };
+  return langMap[lang.toLowerCase()] || "typescript";
+}
+
+// Check if language supports sandbox preview
+function isSandboxSupported(language: string): boolean {
+  const supported = ["javascript", "js", "typescript", "ts", "tsx", "jsx", "html", "css"];
+  return supported.includes(language.toLowerCase());
+}
+
+// Code Editor Component with Kibo UI
 function CodeContent({ 
   content, 
   language, 
+  title,
   onSave,
   isReadonly = false,
 }: { 
   content: string; 
   language: string;
+  title?: string;
   onSave?: (content: string) => void;
   isReadonly?: boolean;
 }) {
   const [localContent, setLocalContent] = useState(content);
+  const [activeTab, setActiveTab] = useState<"code" | "preview" | "console">("code");
   const [isRunning, setIsRunning] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalContent(content);
   }, [content]);
+
+  const shikiLang = mapToShikiLanguage(language);
+  const canPreview = isSandboxSupported(language);
 
   const handleRun = async () => {
     if (language !== "python") {
@@ -123,39 +198,127 @@ function CodeContent({
     }
   };
 
+  // For web languages (JS/TS/HTML/CSS), use Sandbox
+  if (canPreview && !isReadonly) {
+    const getTemplate = () => {
+      if (language === "html") return "vanilla";
+      if (["tsx", "jsx"].includes(language.toLowerCase())) return "react-ts";
+      return "vanilla-ts";
+    };
+
+    const getFilename = () => {
+      if (title) return title;
+      if (language === "html") return "index.html";
+      if (["tsx", "jsx"].includes(language.toLowerCase())) return "App.tsx";
+      if (["ts", "typescript"].includes(language.toLowerCase())) return "index.ts";
+      return "index.js";
+    };
+
+    return (
+      <div className="flex flex-col h-full">
+        <SandboxProvider
+          template={getTemplate()}
+          files={{
+            [getFilename()]: localContent,
+          }}
+        >
+          <SandboxTabs defaultValue="code" value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+            <SandboxTabsList className="border-b border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900">
+              <SandboxTabsTrigger value="code" className="flex items-center gap-1.5">
+                <Code className="w-3.5 h-3.5" />
+                Code
+              </SandboxTabsTrigger>
+              <SandboxTabsTrigger value="preview" className="flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5" />
+                Preview
+              </SandboxTabsTrigger>
+              <SandboxTabsTrigger value="console" className="flex items-center gap-1.5">
+                <Terminal className="w-3.5 h-3.5" />
+                Console
+              </SandboxTabsTrigger>
+            </SandboxTabsList>
+            
+            <SandboxLayout>
+              <SandboxTabsContent value="code" className="h-full">
+                <SandboxCodeEditor 
+                  showLineNumbers 
+                  style={{ height: "100%" }}
+                />
+              </SandboxTabsContent>
+              
+              <SandboxTabsContent value="preview" className="h-full">
+                <SandboxPreview style={{ height: "100%" }} />
+              </SandboxTabsContent>
+              
+              <SandboxTabsContent value="console" className="h-full">
+                <SandboxConsole />
+              </SandboxTabsContent>
+            </SandboxLayout>
+          </SandboxTabs>
+        </SandboxProvider>
+      </div>
+    );
+  }
+
+  // For read-only or non-web languages, use CodeBlock
+  if (isReadonly) {
+    return (
+      <div className="h-full overflow-auto">
+        <CodeBlock
+          data={[{ language: shikiLang, filename: title || `code.${language}`, code: content }]}
+          defaultValue={shikiLang}
+        >
+          <CodeBlockHeader className="bg-chocolate-50 dark:bg-chocolate-900 border-b border-chocolate-200 dark:border-chocolate-700">
+            <div className="flex items-center gap-2 px-3 text-sm text-chocolate-600 dark:text-chocolate-400">
+              <FileCode className="w-4 h-4" />
+              <span>{title || `code.${language}`}</span>
+            </div>
+            <div className="ml-auto">
+              <CodeBlockCopyButton />
+            </div>
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem key={item.language} value={item.language}>
+                <CodeBlockContent language={item.language as BundledLanguage}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+      </div>
+    );
+  }
+
+  // Editable fallback for non-web languages
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto">
-        {isReadonly ? (
-          <pre className="p-4 text-sm font-mono text-gray-800 bg-gray-50 overflow-x-auto h-full">
-            <code>{content}</code>
-          </pre>
-        ) : (
-          <textarea
-            value={localContent}
-            onChange={(e) => {
-              setLocalContent(e.target.value);
-              onSave?.(e.target.value);
-            }}
-            className="w-full h-full p-4 font-mono text-sm bg-gray-900 text-gray-100 resize-none focus:outline-none"
-            spellCheck={false}
-            aria-label="Code editor"
-            placeholder="Enter code..."
-          />
-        )}
+        <textarea
+          value={localContent}
+          onChange={(e) => {
+            setLocalContent(e.target.value);
+            onSave?.(e.target.value);
+          }}
+          className="w-full h-full p-4 font-mono text-sm bg-chocolate-900 text-chocolate-100 resize-none focus:outline-none"
+          spellCheck={false}
+          aria-label="Code editor"
+          placeholder="Enter code..."
+        />
       </div>
       
       {language === "python" && (
-        <div className="border-t border-gray-200">
-          <div className="p-2 flex items-center gap-2 bg-gray-50">
+        <div className="border-t border-chocolate-200 dark:border-chocolate-700">
+          <div className="p-2 flex items-center gap-2 bg-chocolate-50 dark:bg-chocolate-900">
             <button
               type="button"
               onClick={handleRun}
               disabled={isRunning}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-md transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-chocolate-50 bg-chocolate-700 hover:bg-chocolate-800 disabled:opacity-50 rounded-md transition-colors"
             >
               {isRunning ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Spinner className="w-4 h-4" />
               ) : (
                 <Play className="w-4 h-4" />
               )}
@@ -164,7 +327,7 @@ function CodeContent({
           </div>
           
           {output && (
-            <div className="p-4 bg-gray-900 text-gray-100 font-mono text-sm max-h-48 overflow-auto">
+            <div className="p-4 bg-chocolate-900 text-chocolate-100 font-mono text-sm max-h-48 overflow-auto">
               <pre className="whitespace-pre-wrap">{output}</pre>
             </div>
           )}
@@ -193,7 +356,7 @@ function TextContent({
   if (isReadonly) {
     return (
       <div className="p-4 prose prose-sm max-w-none h-full overflow-auto">
-        <pre className="whitespace-pre-wrap font-sans text-gray-800">{content}</pre>
+        <pre className="whitespace-pre-wrap font-sans text-chocolate-800 dark:text-chocolate-200">{content}</pre>
       </div>
     );
   }
@@ -205,7 +368,7 @@ function TextContent({
         setLocalContent(e.target.value);
         onSave?.(e.target.value);
       }}
-      className="w-full h-full p-4 text-sm text-gray-800 resize-none focus:outline-none"
+      className="w-full h-full p-4 text-sm text-chocolate-800 dark:text-chocolate-200 bg-white dark:bg-chocolate-950 resize-none focus:outline-none"
       spellCheck={true}
       aria-label="Text editor"
       placeholder="Enter text..."
@@ -255,31 +418,31 @@ function ArtifactActions({
             type="button"
             onClick={() => onVersionChange?.("prev")}
             disabled={currentVersionIndex === 0}
-            className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             title="Previous version"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-xs text-gray-500 px-1">
+          <span className="text-xs text-chocolate-500 px-1">
             {(currentVersionIndex || 0) + 1} / {totalVersions}
           </span>
           <button
             type="button"
             onClick={() => onVersionChange?.("next")}
             disabled={currentVersionIndex === totalVersions - 1}
-            className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             title="Next version"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
-          <div className="w-px h-4 bg-gray-200 mx-1" />
+          <div className="w-px h-4 bg-chocolate-200 dark:bg-chocolate-700 mx-1" />
         </>
       )}
       
       <button
         type="button"
         onClick={handleCopy}
-        className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
         title="Copy to clipboard"
       >
         {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
@@ -288,7 +451,7 @@ function ArtifactActions({
       <button
         type="button"
         onClick={handleDownload}
-        className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
         title="Download"
       >
         <Download className="w-4 h-4" />
@@ -344,30 +507,30 @@ function PureArtifactPanel({
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className={cn(
-              "fixed right-0 top-0 bottom-0 z-50 bg-white shadow-2xl border-l border-gray-200 flex flex-col",
+              "fixed right-0 top-0 bottom-0 z-50 bg-white dark:bg-chocolate-950 shadow-2xl border-l border-chocolate-200 dark:border-chocolate-800 flex flex-col",
               isExpanded ? "left-0" : "w-full max-w-2xl",
               className
             )}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/80 backdrop-blur-sm">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-chocolate-100 dark:border-chocolate-800 bg-chocolate-50/80 dark:bg-chocolate-900/80 backdrop-blur-sm">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-chocolate-100 dark:bg-chocolate-800 text-chocolate-600 dark:text-chocolate-400">
                   <KindIcon kind={artifact.kind} />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-sm font-semibold text-gray-900 truncate">
+                  <h2 className="text-sm font-semibold text-chocolate-900 dark:text-chocolate-100 truncate">
                     {artifact.title || "Untitled"}
                   </h2>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <div className="flex items-center gap-2 text-xs text-chocolate-500">
                     {artifact.kind === "code" && (
-                      <span className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600">
+                      <span className="px-1.5 py-0.5 bg-chocolate-100 dark:bg-chocolate-800 rounded text-chocolate-600 dark:text-chocolate-400">
                         {language}
                       </span>
                     )}
                     {artifact.status === "streaming" && (
-                      <span className="flex items-center gap-1 text-blue-600">
-                        <Loader2 className="w-3 h-3 animate-spin" />
+                      <span className="flex items-center gap-1 text-chocolate-600 dark:text-chocolate-400">
+                        <Spinner className="w-3 h-3" />
                         Streaming...
                       </span>
                     )}
@@ -378,12 +541,12 @@ function PureArtifactPanel({
               <div className="flex items-center gap-1">
                 <ArtifactActions artifact={artifact} />
                 
-                <div className="w-px h-4 bg-gray-200 mx-1" />
+                <div className="w-px h-4 bg-chocolate-200 dark:bg-chocolate-700 mx-1" />
                 
                 <button
                   type="button"
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
                   title={isExpanded ? "Minimize" : "Maximize"}
                 >
                   {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -392,7 +555,7 @@ function PureArtifactPanel({
                 <button
                   type="button"
                   onClick={closeArtifact}
-                  className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
                   title="Close"
                 >
                   <X className="w-4 h-4" />
@@ -406,6 +569,7 @@ function PureArtifactPanel({
                 <CodeContent
                   content={artifact.content}
                   language={language}
+                  title={artifact.title}
                   onSave={handleContentSave}
                   isReadonly={isReadonly || artifact.status === "streaming"}
                 />
@@ -463,16 +627,16 @@ export function ArtifactPreviewButton({
       type="button"
       onClick={handleClick}
       className={cn(
-        "flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all text-left group",
+        "flex items-center gap-3 w-full p-3 rounded-lg border border-chocolate-200 dark:border-chocolate-700 bg-white dark:bg-chocolate-900 hover:bg-chocolate-50 dark:hover:bg-chocolate-800 hover:border-chocolate-300 dark:hover:border-chocolate-600 transition-all text-left group",
         className
       )}
     >
-      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors">
+      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-chocolate-100 dark:bg-chocolate-800 text-chocolate-600 dark:text-chocolate-400 group-hover:bg-chocolate-200 dark:group-hover:bg-chocolate-700 transition-colors">
         <KindIcon kind={artifact.kind} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 truncate">{artifact.title}</p>
-        <p className="text-xs text-gray-500">
+        <p className="text-sm font-medium text-chocolate-900 dark:text-chocolate-100 truncate">{artifact.title}</p>
+        <p className="text-xs text-chocolate-500">
           {artifact.kind === "code"
             ? getLanguageFromTitle(artifact.title)
             : artifact.kind === "sheet"
@@ -480,7 +644,7 @@ export function ArtifactPreviewButton({
             : "Document"}
         </p>
       </div>
-      <Maximize2 className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+      <Maximize2 className="w-4 h-4 text-chocolate-400 group-hover:text-chocolate-600 dark:group-hover:text-chocolate-300 transition-colors" />
     </button>
   );
 }
