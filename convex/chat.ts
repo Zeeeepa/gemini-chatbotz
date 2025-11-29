@@ -22,7 +22,12 @@ const modelValidator = v.optional(v.union(
   v.literal("mistralai/mistral-large"),
   v.literal("deepseek/deepseek-chat"),
   v.literal("x-ai/grok-4.1-fast:free"),
-  v.literal("moonshotai/kimi-k2-thinking")
+  v.literal("moonshotai/kimi-k2-thinking"),
+  v.literal("prime-intellect/intellect-3"),
+  v.literal("minimax/minimax-m2"),
+  v.literal("x-ai/grok-code-fast-1"),
+  v.literal("z-ai/glm-4.6"),
+  v.literal("qwen/qwen3-vl-235b-a22b-instruct")
 ));
 
 function selectAgent(modelId?: string): Agent {
