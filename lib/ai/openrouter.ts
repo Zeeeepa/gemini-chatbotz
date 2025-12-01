@@ -19,6 +19,8 @@ export type OpenRouterModelId =
   | "meta-llama/llama-3.1-405b-instruct"
   | "mistralai/mistral-large"
   | "deepseek/deepseek-chat"
+  | "deepseek/deepseek-v3.2"
+  | "deepseek/deepseek-v3.2-speciale"
   | "x-ai/grok-4.1-fast:free"
   | "moonshotai/kimi-k2-thinking"
   | "prime-intellect/intellect-3"
@@ -194,6 +196,26 @@ export const OPENROUTER_MODELS: ModelDefinition[] = [
     contextLength: 64000,
     maxOutput: 4096,
     pricing: { prompt: 0.00014, completion: 0.00028 },
+    capabilities: { functionCalling: true, streaming: true },
+  },
+  {
+    id: "deepseek/deepseek-v3.2",
+    name: "DeepSeek V3.2",
+    provider: "DeepSeek",
+    description: "High-efficiency reasoning with Sparse Attention, GPT-5 class performance",
+    contextLength: 131072,
+    maxOutput: 64000,
+    pricing: { prompt: 0.00028, completion: 0.00042 },
+    capabilities: { functionCalling: true, streaming: true },
+  },
+  {
+    id: "deepseek/deepseek-v3.2-speciale",
+    name: "DeepSeek V3.2 Speciale",
+    provider: "DeepSeek",
+    description: "High-compute variant optimized for max reasoning and agentic performance",
+    contextLength: 163840,
+    maxOutput: 65536,
+    pricing: { prompt: 0.00028, completion: 0.0004 },
     capabilities: { functionCalling: true, streaming: true },
   },
   {
