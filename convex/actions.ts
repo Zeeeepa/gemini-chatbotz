@@ -450,44 +450,92 @@ export const generateImageWithNanoBanana = internalAction({
     const fullPrompt = `${styleGuide}${aspectGuide}${qualityGuide}Generate an image: ${prompt}`;
     
     try {
-      const result = await generateText({
-        model: nanoBananaPro,
-        prompt: fullPrompt,
+      // Direct OpenRouter API call with modalities for image generation
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-pro-image-preview",
+          modalities: ["text", "image"],
+          messages: [
+            {
+              role: "user",
+              content: fullPrompt,
+            },
+          ],
+        }),
       });
 
-      // Extract image URLs from the response (Nano Banana returns images inline)
-      // The response may contain base64 data or URLs - we need to handle both
-      const responseText = result.text || "";
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const message = data.choices?.[0]?.message;
+      const content = message?.content || "";
+      const images = message?.images || [];
       
-      // Check if there's embedded image data and save to storage
+      // Extract image URLs from the response
       const imageUrls: string[] = [];
       
-      // Look for data URLs (base64 images) in the response
-      const base64Matches = responseText.match(/data:image\/[^;]+;base64,[^"'\s]+/g);
-      if (base64Matches) {
-        for (const base64Data of base64Matches.slice(0, 4)) { // Limit to 4 images
-          try {
-            // Extract mime type and data
-            const [header, data] = base64Data.split(',');
-            const mimeType = header.match(/data:([^;]+)/)?.[1] || 'image/png';
-            const buffer = Buffer.from(data, 'base64');
-            
-            // Store in Convex file storage
-            const blob = new Blob([buffer], { type: mimeType });
-            const storageId = await ctx.storage.store(blob);
-            const url = await ctx.storage.getUrl(storageId);
-            if (url) imageUrls.push(url);
-          } catch {
-            // Skip invalid base64 data
+      // Handle images array from OpenRouter (Nano Banana Pro returns images here)
+      // Structure: images[].image_url.url contains the base64 data URL
+      if (Array.isArray(images) && images.length > 0) {
+        for (const image of images.slice(0, 4)) {
+          // Extract URL from nested structure: image.image_url.url
+          const imageData = typeof image === 'string' 
+            ? image 
+            : image?.image_url?.url || image?.url || image?.data;
+          
+          if (imageData?.startsWith("data:image/")) {
+            try {
+              const [header, base64Data] = imageData.split(',');
+              const mimeType = header.match(/data:([^;]+)/)?.[1] || 'image/png';
+              const buffer = Buffer.from(base64Data, 'base64');
+              const blob = new Blob([buffer], { type: mimeType });
+              const storageId = await ctx.storage.store(blob);
+              const storedUrl = await ctx.storage.getUrl(storageId);
+              if (storedUrl) imageUrls.push(storedUrl);
+            } catch (e) {
+              console.error("Failed to process image:", e);
+            }
+          } else if (imageData?.startsWith("http")) {
+            imageUrls.push(imageData);
           }
         }
       }
       
-      // Also look for regular image URLs
-      const urlMatches = responseText.match(/https?:\/\/[^\s"'<>]+\.(?:png|jpg|jpeg|gif|webp)/gi);
-      if (urlMatches) {
-        imageUrls.push(...urlMatches.slice(0, 4));
+      // Also handle array content format
+      if (Array.isArray(content)) {
+        for (const part of content) {
+          if (part.type === "image_url" && part.image_url?.url) {
+            const imageUrl = part.image_url.url;
+            if (imageUrl.startsWith("data:image/")) {
+              try {
+                const [header, base64Data] = imageUrl.split(',');
+                const mimeType = header.match(/data:([^;]+)/)?.[1] || 'image/png';
+                const buffer = Buffer.from(base64Data, 'base64');
+                const blob = new Blob([buffer], { type: mimeType });
+                const storageId = await ctx.storage.store(blob);
+                const storedUrl = await ctx.storage.getUrl(storageId);
+                if (storedUrl) imageUrls.push(storedUrl);
+              } catch {
+                // Skip invalid base64
+              }
+            } else {
+              imageUrls.push(imageUrl);
+            }
+          }
+        }
       }
+      
+      const textContent = Array.isArray(content) 
+        ? content.filter((p: { type: string }) => p.type === "text").map((p: { text: string }) => p.text).join("\n")
+        : String(content);
 
       return {
         status: "success",
@@ -495,10 +543,9 @@ export const generateImageWithNanoBanana = internalAction({
         style: style || "default",
         aspectRatio: aspectRatio || "1:1",
         quality: quality || "standard",
-        // Truncate text to avoid size limits - don't include raw base64
-        text: responseText.length > 1000 
-          ? responseText.substring(0, 1000) + "... [truncated]" 
-          : responseText,
+        text: textContent.length > 500 
+          ? textContent.substring(0, 500) + "..." 
+          : textContent,
         imageUrls: imageUrls,
         imageCount: imageUrls.length,
       };
