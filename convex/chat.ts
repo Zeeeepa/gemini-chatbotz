@@ -18,7 +18,6 @@ const modelValidator = v.optional(v.union(
   v.literal("google/gemini-2.0-flash-exp"),
   v.literal("google/gemini-pro-1.5"),
   v.literal("google/gemini-3-pro-preview"),
-  v.literal("google/gemini-3-pro-image-preview"),
   v.literal("meta-llama/llama-3.1-70b-instruct"),
   v.literal("meta-llama/llama-3.1-405b-instruct"),
   v.literal("mistralai/mistral-large"),
@@ -120,12 +119,7 @@ export const sendMessage = action({
     attachments: v.optional(v.array(fileAttachmentValidator)),
   },
   handler: async (ctx, { threadId, prompt, userId, modelId, attachments }) => {
-    // Image generation models don't support text generation - fallback to regular model
-    const effectiveModelId = modelId === "google/gemini-3-pro-image-preview" 
-      ? "google/gemini-3-pro-preview" 
-      : modelId;
-    
-    const agent: Agent = effectiveModelId ? createAgentWithModel(effectiveModelId) : flightAgent;
+    const agent: Agent = modelId ? createAgentWithModel(modelId) : flightAgent;
     const { thread } = await agent.continueThread(ctx, { threadId });
     
     // PRE-ANALYZE files before sending to agent (avoids tool calling issues with Gemini 3 Pro)
@@ -159,12 +153,7 @@ export const streamMessage = action({
     attachments: v.optional(v.array(fileAttachmentValidator)),
   },
   handler: async (ctx, { threadId, prompt, userId, modelId, attachments }) => {
-    // Image generation models don't support text streaming - fallback to regular model
-    const effectiveModelId = modelId === "google/gemini-3-pro-image-preview" 
-      ? "google/gemini-3-pro-preview" 
-      : modelId;
-    
-    const agent: Agent = effectiveModelId ? createAgentWithModel(effectiveModelId) : flightAgent;
+    const agent: Agent = modelId ? createAgentWithModel(modelId) : flightAgent;
     const { thread } = await agent.continueThread(ctx, { threadId });
     
     // PRE-ANALYZE files before sending to agent (avoids tool calling issues with Gemini 3 Pro)

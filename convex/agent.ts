@@ -21,7 +21,6 @@ type OpenRouterModelId =
   | "google/gemini-2.0-flash-exp"
   | "google/gemini-pro-1.5"
   | "google/gemini-3-pro-preview"
-  | "google/gemini-3-pro-image-preview"
   | "meta-llama/llama-3.1-70b-instruct"
   | "meta-llama/llama-3.1-405b-instruct"
   | "mistralai/mistral-large"
@@ -738,6 +737,31 @@ Use this when you need to:
     }),
     handler: async (ctx, args) => {
       const result = await ctx.runAction(internal.hyperbrowser.createBrowserSession, args);
+      return result;
+    },
+  }),
+
+  // ==========================================================================
+  // Image Generation (Nano Banana Pro)
+  // ==========================================================================
+  generateAdvancedImage: createTool({
+    description: `Generate high-quality images using Nano Banana Pro (Gemini 3 Pro Image Preview).
+Best for:
+- Infographics, diagrams, and data visualizations
+- Cinematic composites and artistic images
+- Images with text (multilingual, long passages)
+- Product visualization and storyboarding
+- Professional-grade design with up to 4K output
+
+Supports: multiple aspect ratios, style controls, identity preservation (up to 5 subjects)`,
+    args: z.object({
+      prompt: z.string().describe("Detailed description of the image to generate"),
+      style: z.string().optional().describe("Style: realistic, artistic, cinematic, illustration, minimalist, etc."),
+      aspectRatio: z.string().optional().describe("Aspect ratio: 1:1, 16:9, 9:16, 4:3, 3:4, 2:1"),
+      quality: z.string().optional().describe("Quality: standard, high, 2k, 4k"),
+    }),
+    handler: async (ctx, args) => {
+      const result = await ctx.runAction(internal.actions.generateImageWithNanoBanana, args);
       return result;
     },
   }),

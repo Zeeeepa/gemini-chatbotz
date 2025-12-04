@@ -90,6 +90,7 @@ export function ToolView({ toolName, args, result, status }: ToolViewProps) {
     case "generateImage":
     case "renderImage":
     case "createImage":
+    case "generateAdvancedImage":
       return <ImageGenerationView args={args} result={result} isLoading={isLoading} />;
     case "analyzeImage":
     case "processImages":

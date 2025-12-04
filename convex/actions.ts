@@ -21,6 +21,8 @@ const google = createGoogleGenerativeAI({
 const geminiFlash = openrouter("google/gemini-3-pro-preview");
 // For file/vision inputs - native Google SDK format routed through OpenRouter
 const geminiVision = google("google/gemini-2.0-flash-exp");
+// Nano Banana Pro - Image generation model
+const nanoBananaPro = openrouter("google/gemini-3-pro-image-preview");
 
 export const generateFlightStatus = internalAction({
   args: {
@@ -426,5 +428,48 @@ export const analyzeImage = internalAction({
       text: result.text,
       usage: result.usage,
     };
+  },
+});
+
+/**
+ * Generate images using Nano Banana Pro (Gemini 3 Pro Image Preview)
+ * Supports: infographics, diagrams, composites, text in images, 2K/4K output
+ */
+export const generateImageWithNanoBanana = internalAction({
+  args: {
+    prompt: v.string(),
+    style: v.optional(v.string()),
+    aspectRatio: v.optional(v.string()),
+    quality: v.optional(v.string()),
+  },
+  handler: async (_ctx, { prompt, style, aspectRatio, quality }) => {
+    const styleGuide = style ? `Style: ${style}. ` : "";
+    const aspectGuide = aspectRatio ? `Aspect ratio: ${aspectRatio}. ` : "";
+    const qualityGuide = quality ? `Quality: ${quality}. ` : "";
+    
+    const fullPrompt = `${styleGuide}${aspectGuide}${qualityGuide}Generate an image: ${prompt}`;
+    
+    try {
+      const result = await generateText({
+        model: nanoBananaPro,
+        prompt: fullPrompt,
+      });
+
+      return {
+        status: "success",
+        prompt: prompt,
+        style: style || "default",
+        aspectRatio: aspectRatio || "1:1",
+        quality: quality || "standard",
+        text: result.text,
+        rawResponse: JSON.stringify(result),
+      };
+    } catch (error) {
+      return {
+        status: "error",
+        reason: String(error),
+        prompt: prompt,
+      };
+    }
   },
 });
