@@ -442,7 +442,7 @@ export const generateImageWithNanoBanana = internalAction({
     aspectRatio: v.optional(v.string()),
     quality: v.optional(v.string()),
   },
-  handler: async (_ctx, { prompt, style, aspectRatio, quality }) => {
+  handler: async (ctx, { prompt, style, aspectRatio, quality }) => {
     const styleGuide = style ? `Style: ${style}. ` : "";
     const aspectGuide = aspectRatio ? `Aspect ratio: ${aspectRatio}. ` : "";
     const qualityGuide = quality ? `Quality: ${quality}. ` : "";
@@ -455,14 +455,52 @@ export const generateImageWithNanoBanana = internalAction({
         prompt: fullPrompt,
       });
 
+      // Extract image URLs from the response (Nano Banana returns images inline)
+      // The response may contain base64 data or URLs - we need to handle both
+      const responseText = result.text || "";
+      
+      // Check if there's embedded image data and save to storage
+      const imageUrls: string[] = [];
+      
+      // Look for data URLs (base64 images) in the response
+      const base64Matches = responseText.match(/data:image\/[^;]+;base64,[^"'\s]+/g);
+      if (base64Matches) {
+        for (const base64Data of base64Matches.slice(0, 4)) { // Limit to 4 images
+          try {
+            // Extract mime type and data
+            const [header, data] = base64Data.split(',');
+            const mimeType = header.match(/data:([^;]+)/)?.[1] || 'image/png';
+            const buffer = Buffer.from(data, 'base64');
+            
+            // Store in Convex file storage
+            const blob = new Blob([buffer], { type: mimeType });
+            const storageId = await ctx.storage.store(blob);
+            const url = await ctx.storage.getUrl(storageId);
+            if (url) imageUrls.push(url);
+          } catch {
+            // Skip invalid base64 data
+          }
+        }
+      }
+      
+      // Also look for regular image URLs
+      const urlMatches = responseText.match(/https?:\/\/[^\s"'<>]+\.(?:png|jpg|jpeg|gif|webp)/gi);
+      if (urlMatches) {
+        imageUrls.push(...urlMatches.slice(0, 4));
+      }
+
       return {
         status: "success",
         prompt: prompt,
         style: style || "default",
         aspectRatio: aspectRatio || "1:1",
         quality: quality || "standard",
-        text: result.text,
-        rawResponse: JSON.stringify(result),
+        // Truncate text to avoid size limits - don't include raw base64
+        text: responseText.length > 1000 
+          ? responseText.substring(0, 1000) + "... [truncated]" 
+          : responseText,
+        imageUrls: imageUrls,
+        imageCount: imageUrls.length,
       };
     } catch (error) {
       return {
