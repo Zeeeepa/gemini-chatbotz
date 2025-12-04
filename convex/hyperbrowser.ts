@@ -51,7 +51,7 @@ export const hyperAgentTask = internalAction({
         task: args.task,
         llm: (args.llm || "gpt-4o") as any,
         maxSteps: args.maxSteps || 20,
-        sessionId: args.sessionId ?? session?.id,
+        sessionId: args.sessionId || session?.id,
         keepBrowserOpen: args.keepBrowserOpen,
         useCustomApiKeys: args.useCustomApiKeys,
         apiKeys: args.openaiApiKey ? { openai: args.openaiApiKey } : undefined,
@@ -60,7 +60,7 @@ export const hyperAgentTask = internalAction({
       return {
         status: result.status,
         jobId: result.jobId,
-        sessionId: args.sessionId ?? session?.id,
+        sessionId: args.sessionId || session?.id,
         liveUrl: session?.liveUrl || (result as any).liveUrl,
         finalResult: result.data?.finalResult,
         steps: result.data?.steps,
