@@ -11,8 +11,8 @@ import { Overview } from "./overview";
 import { DEFAULT_MODEL, type OpenRouterModelId } from "@/lib/ai/openrouter";
 import { ThinkingMessage } from "@/components/ai-elements/thinking-message";
 import { toast } from "sonner";
-import { upload } from "@vercel/blob/client";
 import type { Id } from "@/convex/_generated/dataModel";
+import { upload } from "@vercel/blob/client";
 
 // File attachment type for uploaded files
 type FileAttachment = {
@@ -82,12 +82,27 @@ export function Chat({
         }
 
         try {
-          // Upload to Vercel Blob (signed via API route)
-          const blob = await upload(file.name, file, {
-            access: "public",
-            handleUploadUrl: "/api/files/upload",
-            multipart: true,
+          // Get a client upload token (no file body sent to Next route)
+          const signedRes = await fetch("/api/files/upload-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename: file.name, contentType: file.type }),
           });
+          if (!signedRes.ok) {
+            throw new Error("Failed to get upload token");
+          }
+          const { token, pathname } = await signedRes.json();
+
+          // Upload directly to Vercel Blob using the client token
+          const blob = await upload(
+            pathname,
+            file,
+            {
+              token,
+              access: "public",
+              multipart: true,
+            } as any // token option is supported at runtime; cast to satisfy TS
+          );
 
           uploaded.push({
             url: blob.url,
