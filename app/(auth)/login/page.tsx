@@ -2,39 +2,54 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { AuthForm } from "@/components/custom/auth-form";
 import { SubmitButton } from "@/components/custom/submit-button";
 
-import { login, LoginActionState } from "../actions";
-
 export default function Page() {
   const router = useRouter();
-
   const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [state, formAction] = useActionState<LoginActionState, FormData>(
-    login,
-    {
-      status: "idle",
-    },
-  );
+  const handleSubmit = async (formData: FormData) => {
+    const emailValue = (formData.get("email") as string)?.trim();
+    const password = formData.get("password") as string;
+    setEmail(emailValue);
 
-  useEffect(() => {
-    if (state.status === "failed") {
-      toast.error("Invalid credentials!");
-    } else if (state.status === "invalid_data") {
-      toast.error("Failed validating your submission!");
-    } else if (state.status === "success") {
-      router.refresh();
+    if (!emailValue || !password) {
+      toast.error("Email and password are required");
+      return;
     }
-  }, [state.status, router]);
 
-  const handleSubmit = (formData: FormData) => {
-    setEmail(formData.get("email") as string);
-    formAction(formData);
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/auth/sign-in/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: emailValue,
+          password,
+          rememberMe: true,
+          callbackURL: typeof window !== "undefined" ? window.location.origin : undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        const message = body?.error?.message || body?.error || "Failed to sign in";
+        throw new Error(message);
+      }
+
+      toast.success("Signed in");
+      router.refresh();
+      router.push("/");
+    } catch (error) {
+      toast.error((error as Error).message || "Failed to sign in");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -46,8 +61,8 @@ export default function Page() {
             Use your email and password to sign in
           </p>
         </div>
-        <AuthForm action={handleSubmit} defaultEmail={email}>
-          <SubmitButton>Sign in</SubmitButton>
+        <AuthForm onSubmit={handleSubmit} defaultEmail={email}>
+          <SubmitButton isLoading={isLoading}>Sign in</SubmitButton>
           <p className="text-center text-sm text-gray-600 mt-4 dark:text-zinc-400">
             {"Don't have an account? "}
             <Link

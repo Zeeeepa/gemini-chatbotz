@@ -2,8 +2,12 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { flightAgent } from "./agent";
 import { api } from "./_generated/api";
+import { authComponent, createAuth } from "./auth";
 
 const http = httpRouter();
+
+// Register Better Auth HTTP routes
+authComponent.registerRoutes(http, createAuth);
 
 http.route({
   path: "/chat",

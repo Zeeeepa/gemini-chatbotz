@@ -13,6 +13,11 @@ GOOGLE_GENERATIVE_AI_API_KEY=your_google_ai_api_key
 
 # Exa API key for web search
 EXA_API_KEY=your_exa_api_key
+
+# Better Auth
+BETTER_AUTH_SECRET=your_better_auth_secret   # e.g. openssl rand -base64 32
+SITE_URL=http://localhost:3000               # or your prod URL
+CONVEX_SITE_URL=https://your-deployment.convex.site
 ```
 
 ## PDF & File Analysis
@@ -33,6 +38,13 @@ The app uses the native `@ai-sdk/google` provider for file analysis with Gemini'
 ### Usage
 
 Upload files through the chat interface, then ask questions about them. The agent will automatically use the appropriate analysis tools.
+
+---
+
+Auth & routing
+---------------
+- Better Auth routes are registered via `authComponent.registerRoutes(http, createAuth)` in `convex/http.ts`.
+- Email/password flows hit `/api/auth/sign-in/email` and `/api/auth/sign-up/email` (proxied to Convex).
 
 ---
 

@@ -2,41 +2,58 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { AuthForm } from "@/components/custom/auth-form";
 import { SubmitButton } from "@/components/custom/submit-button";
 
-import { register, RegisterActionState } from "../actions";
-
 export default function Page() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
-  const [state, formAction] = useActionState<RegisterActionState, FormData>(
-    register,
-    {
-      status: "idle",
-    },
-  );
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (state.status === "user_exists") {
-      toast.error("Account already exists");
-    } else if (state.status === "failed") {
-      toast.error("Failed to create account");
-    } else if (state.status === "invalid_data") {
-      toast.error("Failed validating your submission!");
-    } else if (state.status === "success") {
+  const handleSubmit = async (formData: FormData) => {
+    const emailValue = (formData.get("email") as string)?.trim();
+    const password = formData.get("password") as string;
+    setEmail(emailValue);
+
+    if (!emailValue || !password) {
+      toast.error("Email and password are required");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const name = emailValue.split("@")[0] || "User";
+      const res = await fetch("/api/auth/sign-up/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email: emailValue,
+          password,
+          rememberMe: true,
+          callbackURL: typeof window !== "undefined" ? window.location.origin : undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        const message = body?.error?.message || body?.error || "Failed to create account";
+        throw new Error(message);
+      }
+
       toast.success("Account created successfully");
       router.refresh();
+      router.push("/");
+    } catch (error) {
+      const msg = (error as Error).message || "Failed to create account";
+      toast.error(msg.includes("409") ? "Account already exists" : msg);
+    } finally {
+      setIsLoading(false);
     }
-  }, [state, router]);
-
-  const handleSubmit = (formData: FormData) => {
-    setEmail(formData.get("email") as string);
-    formAction(formData);
   };
 
   return (
@@ -48,8 +65,8 @@ export default function Page() {
             Create an account with your email and password
           </p>
         </div>
-        <AuthForm action={handleSubmit} defaultEmail={email}>
-          <SubmitButton>Sign Up</SubmitButton>
+        <AuthForm onSubmit={handleSubmit} defaultEmail={email}>
+          <SubmitButton isLoading={isLoading}>Sign Up</SubmitButton>
           <p className="text-center text-sm text-gray-600 mt-4 dark:text-zinc-400">
             {"Already have an account? "}
             <Link

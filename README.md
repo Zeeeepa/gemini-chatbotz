@@ -29,9 +29,9 @@
   - Component primitives from [Radix UI](https://radix-ui.com) for accessibility and flexibility
 - Data Persistence
   - [Vercel Postgres powered by Neon](https://vercel.com/storage/postgres) for saving chat history and user data
-  - [Vercel Blob](https://vercel.com/storage/blob) for efficient object storage
-- [NextAuth.js](https://github.com/nextauthjs/next-auth)
-  - Simple and secure authentication
+  - [Vercel Blob](https://vercel.com/storage/blob) for efficient object storage and direct-to-Blob uploads
+- Authentication
+  - [Better Auth](https://www.better-auth.com/) + Convex auth component (email + password, exclusive—NextAuth removed)
 
 ## Model Providers
 
@@ -45,7 +45,7 @@ You can deploy your own version of the Next.js AI Chatbot to Vercel with one cli
 
 ## Running locally
 
-You will need to use the environment variables [defined in `.env.example`](.env.example) to run Next.js AI Chatbot. It's recommended you use [Vercel Environment Variables](https://vercel.com/docs/projects/environment-variables) for this, but a `.env` file is all that is necessary.
+You will need the environment variables [defined in `.env.example`](.env.example) plus the Better Auth and Blob settings below. It's recommended you use [Vercel Environment Variables](https://vercel.com/docs/projects/environment-variables), but a `.env.local` file is sufficient for dev.
 
 > Note: You should not commit your `.env` file or it will expose secrets that will allow others to control access to your various Google Cloud and authentication provider accounts.
 
@@ -53,9 +53,30 @@ You will need to use the environment variables [defined in `.env.example`](.env.
 2. Link local instance with Vercel and GitHub accounts (creates `.vercel` directory): `vercel link`
 3. Download your environment variables: `vercel env pull`
 
+Required (local dev examples)
+
+```bash
+# Auth + Convex
+CONVEX_DEPLOYMENT=dev:your-deployment
+NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
+NEXT_PUBLIC_CONVEX_SITE_URL=https://your-deployment.convex.site
+SITE_URL=http://localhost:3000
+BETTER_AUTH_SECRET=change_me # e.g. `openssl rand -base64 32`
+
+# Storage
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
+
+# Models / tools
+OPENROUTER_API_KEY=...
+GOOGLE_GENERATIVE_AI_API_KEY=...
+EXA_API_KEY=...
+```
+
+Run locally
 ```bash
 pnpm install
+# start convex dev + Next.js
 pnpm dev
 ```
 
-Your app template should now be running on [localhost:3000](http://localhost:3000/).
+Your app should now be running on [localhost:3000](http://localhost:3000/).

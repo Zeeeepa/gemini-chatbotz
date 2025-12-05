@@ -24,6 +24,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unsupported content type" }, { status: 400 });
     }
 
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.error("BLOB_READ_WRITE_TOKEN environment variable is missing");
+      return NextResponse.json(
+        {
+          error:
+            "BLOB_READ_WRITE_TOKEN is not set. Add it in Vercel project settings (Environment Variables) or .env.local and restart the dev server.",
+        },
+        { status: 500 }
+      );
+    }
+
     const token = await generateClientTokenFromReadWriteToken({
       token: process.env.BLOB_READ_WRITE_TOKEN,
       allowedContentTypes: ALLOWED_TYPES,
