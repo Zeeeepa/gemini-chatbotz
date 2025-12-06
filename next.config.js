@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+module.exports = {
   serverExternalPackages: [],
   transpilePackages: ['streamdown', 'shiki'],
   images: {
@@ -11,6 +11,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Explicit build id to avoid generateBuildId undefined issues
+  generateBuildId: async () => `build-${Date.now()}`,
 };
 
-export default nextConfig;
