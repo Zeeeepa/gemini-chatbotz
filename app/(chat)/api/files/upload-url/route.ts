@@ -36,10 +36,9 @@ export async function POST(request: Request) {
     }
 
     const token = await generateClientTokenFromReadWriteToken({
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token: process.env.BLOB_READ_WRITE_TOKEN!,
       allowedContentTypes: ALLOWED_TYPES,
       maximumSizeInBytes: MAX_FILE_SIZE_BYTES,
-      access: "public",
       addRandomSuffix: true,
       pathname: filename,
     });
