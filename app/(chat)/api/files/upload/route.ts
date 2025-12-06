@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  const result = await handleUpload({
+  return handleUpload({
     request,
     onBeforeGenerateToken: async () => ({
       allowedContentTypes: ALLOWED_TYPES,
@@ -18,11 +18,4 @@ export async function POST(request: Request) {
       // No-op: the client receives blob metadata and handles Convex ingestion.
     },
   });
-
-  // handleUpload returns different types, ensure we return a Response
-  if (result instanceof Response) {
-    return result;
-  }
-
-  return NextResponse.json(result);
 }
