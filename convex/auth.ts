@@ -5,19 +5,8 @@ import { DataModel } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { betterAuth } from "better-auth";
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.SITE_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-
-const convexSiteUrl =
-  process.env.NEXT_PUBLIC_CONVEX_SITE_URL || process.env.CONVEX_SITE_URL;
-
-if (!convexSiteUrl) {
-  throw new Error(
-    "Missing Convex site URL. Set NEXT_PUBLIC_CONVEX_SITE_URL or CONVEX_SITE_URL to your Convex deployment (e.g. https://brilliant-ferret-250.convex.cloud)."
-  );
-}
+// SITE_URL must be set in Convex dashboard for Better Auth to work
+const siteUrl = process.env.SITE_URL || "http://localhost:3000";
 
 // The component client exposes helper methods for Convex + Better Auth
 export const authComponent = createClient<DataModel>(components.betterAuth);
