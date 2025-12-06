@@ -241,8 +241,8 @@ export async function DELETE(request: Request) {
     return new Response("Not Found", { status: 404 });
   }
 
-  const session = await auth();
-  const deleteUserId = session?.user?.id || GUEST_USER_ID;
+  // For DELETE operations, use guest user since we removed NextAuth
+  const deleteUserId = GUEST_USER_ID;
 
   try {
     const chat = await getChatById({ id });
