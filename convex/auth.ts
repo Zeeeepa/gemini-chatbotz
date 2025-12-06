@@ -19,6 +19,13 @@ export const createAuth = (ctx: GenericCtx<DataModel>, { optionsOnly } = { optio
     },
     baseURL: siteUrl,
     database: authComponent.adapter(ctx),
+    // Allow requests from these origins (app hosts and Convex site)
+    trustedOrigins: [
+      "https://chat.opulentia.ai",
+      "https://worldeater.im",
+      "http://localhost:3000",
+      "https://brilliant-ferret-250.convex.site",
+    ],
     // Simple email/password auth without email verification for now
     emailAndPassword: {
       enabled: true,
