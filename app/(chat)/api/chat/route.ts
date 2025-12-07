@@ -21,6 +21,12 @@ import { generateUUID } from "@/lib/utils";
 const GUEST_USER_ID = "guest-user-00000000-0000-0000-0000-000000000000";
 
 export async function POST(request: Request) {
+  // Ultra simple test response
+  return new Response('Chat API test response - deployment working', {
+    status: 200,
+    headers: { 'Content-Type': 'text/plain' },
+  });
+
   try {
     console.log('Chat API called with request:', request.url);
 
