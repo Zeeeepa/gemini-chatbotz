@@ -1,8 +1,7 @@
 import { Agent, createTool } from "@convex-dev/agent";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { components } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import { z } from "zod";
-import { internal } from "./_generated/api";
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -189,6 +188,45 @@ Exa is optimized for AI applications with superior semantic understanding and lo
 - **displayFlightStatus**: Check status of a specific flight by number and date.
 - **generateImage**: Create AI-generated images from text prompts.
 </utility_tools>
+
+<deepcrawl_tools>
+You have access to Deepcrawl for powerful web scraping and content extraction:
+
+**When to use Deepcrawl:**
+- Converting web pages to clean markdown for analysis
+- Extracting structured metadata from pages
+- Building site maps and link trees
+- Getting page content optimized for LLM consumption
+
+**Tools Available:**
+
+1. **deepcrawlGetMarkdown** - Quick markdown extraction
+   - Fastest way to get clean, readable markdown from any URL
+   - Perfect for prompt-ready snippets
+   - Supports caching for repeated calls
+
+2. **deepcrawlReadUrl** - Full page context extraction
+   - Returns structured metadata, markdown, cleaned HTML
+   - Optional robots.txt and sitemap data
+   - Includes performance metrics
+
+3. **deepcrawlGetLinks** - Quick link extraction (GET)
+   - Extract all links from a page
+   - Optional hierarchical tree view
+   - Filter by internal/external links
+
+4. **deepcrawlExtractLinks** - Deep site mapping (POST)
+   - Build hierarchical site maps
+   - Rich metadata per link
+   - Exclude patterns, query stripping
+   - Best for understanding domain structure
+
+**Best Practices:**
+- Use getMarkdown for simple content extraction
+- Use readUrl when you need metadata + markdown together
+- Use extractLinks with tree=true for site navigation understanding
+- Combine with webSearch: search to find URLs, then deepcrawl to read them
+</deepcrawl_tools>
 
 <hyperbrowser_tools>
 You have access to Hyperbrowser for advanced browser automation with LIVE PREVIEW:
@@ -739,6 +777,95 @@ Use this when you need to:
     }),
     handler: async (ctx, args) => {
       const result = await ctx.runAction(internal.hyperbrowser.createBrowserSession, args);
+      return result;
+    },
+  }),
+
+  // ==========================================================================
+  // Deepcrawl Tools (Web Scraping & Content Extraction)
+  // ==========================================================================
+  deepcrawlGetMarkdown: createTool({
+    description: `Turn any URL into clean markdown optimized for LLM consumption.
+Fastest way to get readable content from a web page.
+Perfect for:
+- Quick content extraction for analysis
+- Building prompt-ready snippets
+- Cached refreshes on repeated calls`,
+    args: z.object({
+      url: z.string().describe("URL to convert to markdown"),
+      expirationTtl: z.number().optional().describe("Cache window in seconds (minimum 60)"),
+      cleaningProcessor: z.enum(["html-rewriter", "cheerio-reader"]).optional().describe("Processing method: cheerio-reader (default) or html-rewriter for GitHub-like pages"),
+    }),
+    handler: async (ctx, args) => {
+      const result = await ctx.runAction((internal as any).deepcrawl.getMarkdown, args);
+      return result;
+    },
+  }),
+  deepcrawlReadUrl: createTool({
+    description: `Read a URL and extract full page context with structured metadata.
+Returns: title, description, markdown, cleaned HTML, metrics, and more.
+Use when you need:
+- Both markdown AND metadata from a page
+- Performance metrics and crawl diagnostics
+- Robots.txt or sitemap data`,
+    args: z.object({
+      url: z.string().describe("URL to read"),
+      markdown: z.boolean().optional().describe("Include markdown content (default: true)"),
+      metadata: z.boolean().optional().describe("Include page metadata (default: true)"),
+      cleanedHtml: z.boolean().optional().describe("Include cleaned HTML"),
+      rawHtml: z.boolean().optional().describe("Include raw HTML"),
+      robots: z.boolean().optional().describe("Include robots.txt data"),
+      sitemapXML: z.boolean().optional().describe("Include sitemap XML"),
+      expirationTtl: z.number().optional().describe("Cache window in seconds"),
+      cleaningProcessor: z.enum(["html-rewriter", "cheerio-reader"]).optional().describe("Processing method"),
+    }),
+    handler: async (ctx, args) => {
+      const result = await ctx.runAction((internal as any).deepcrawl.readUrl, args);
+      return result;
+    },
+  }),
+  deepcrawlGetLinks: createTool({
+    description: `Quick link extraction from a URL via GET request.
+Returns all links found on a page with optional tree structure.
+Good for:
+- Fast link discovery
+- Simple site navigation understanding
+- Filtering internal vs external links`,
+    args: z.object({
+      url: z.string().describe("URL to extract links from"),
+      tree: z.boolean().optional().describe("Return hierarchical tree structure (default: true)"),
+      metadata: z.boolean().optional().describe("Include metadata for each link"),
+      includeExternal: z.boolean().optional().describe("Include external links"),
+      includeMedia: z.boolean().optional().describe("Include media links"),
+      folderFirst: z.boolean().optional().describe("Sort folders before files"),
+      linksOrder: z.enum(["alphabetical", "page"]).optional().describe("Link ordering"),
+    }),
+    handler: async (ctx, args) => {
+      const result = await ctx.runAction((internal as any).deepcrawl.getLinks, args);
+      return result;
+    },
+  }),
+  deepcrawlExtractLinks: createTool({
+    description: `Deep site mapping and link extraction via POST request.
+Builds hierarchical site maps with rich metadata per node.
+Best for:
+- Understanding domain structure
+- Building comprehensive site trees
+- Filtering with patterns and exclusions
+- Getting navigation hierarchy`,
+    args: z.object({
+      url: z.string().describe("URL to crawl"),
+      tree: z.boolean().optional().describe("Return hierarchical tree (default: true)"),
+      metadata: z.boolean().optional().describe("Include metadata per link (default: true)"),
+      includeExternal: z.boolean().optional().describe("Include external links"),
+      includeMedia: z.boolean().optional().describe("Include media links"),
+      stripQueryParams: z.boolean().optional().describe("Remove query params from URLs"),
+      excludePatterns: z.array(z.string()).optional().describe("Regex patterns to exclude"),
+      folderFirst: z.boolean().optional().describe("Sort folders before files"),
+      linksOrder: z.enum(["alphabetical", "page"]).optional().describe("Link ordering"),
+    }),
+    handler: async (ctx, args) => {
+      const result = await ctx.runAction((internal as any).deepcrawl.extractLinks, args);
       return result;
     },
   }),

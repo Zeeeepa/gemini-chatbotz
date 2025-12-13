@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Plane, CreditCard, MapPin, Ticket, Search, Cloud, FileCode, FileText, Image as ImageIcon, Globe, CheckCircle, ShieldCheck, Sparkles, Code, Table, Monitor, ExternalLink, Maximize2, Play, ImagePlus } from "lucide-react";
+import { Plane, CreditCard, MapPin, Ticket, Search, Cloud, FileCode, FileText, Image as ImageIcon, Globe, CheckCircle, ShieldCheck, Sparkles, Code, Table, Monitor, ExternalLink, Maximize2, Play, ImagePlus, Link2, FileDown, TreePine } from "lucide-react";
 import { Snippet, SnippetHeader, SnippetCopyButton, SnippetTabsList, SnippetTabsTrigger, SnippetTabsContent } from "@/components/kibo-ui/snippet";
 import { Spinner } from "@/components/kibo-ui/spinner";
 import { Status, StatusIndicator, StatusLabel } from "@/components/kibo-ui/status";
@@ -116,6 +116,14 @@ export function ToolView({ toolName, args, result, status }: ToolViewProps) {
       return <HyperbrowserScrapeView toolName={toolName} args={args} result={result} isLoading={isLoading} />;
     case "createBrowserSession":
       return <BrowserSessionView args={args} result={result} isLoading={isLoading} />;
+    // Deepcrawl Tools
+    case "deepcrawlGetMarkdown":
+      return <DeepcrawlMarkdownView args={args} result={result} isLoading={isLoading} />;
+    case "deepcrawlReadUrl":
+      return <DeepcrawlReadUrlView args={args} result={result} isLoading={isLoading} />;
+    case "deepcrawlGetLinks":
+    case "deepcrawlExtractLinks":
+      return <DeepcrawlLinksView toolName={toolName} args={args} result={result} isLoading={isLoading} />;
     default:
       return <GenericToolView toolName={toolName} args={args} result={result} isLoading={isLoading} />;
   }
@@ -855,6 +863,298 @@ function BrowserSessionView({ args, result, isLoading }: { args: Record<string, 
       )}
 
       {liveUrl && <LivePreviewEmbed liveUrl={liveUrl} title="Browser Session" />}
+    </div>
+  );
+}
+
+// =============================================================================
+// Deepcrawl Tool Views
+// =============================================================================
+
+function DeepcrawlMarkdownView({ args, result, isLoading }: { args: Record<string, unknown>; result?: Record<string, unknown>; isLoading: boolean }) {
+  const markdown = (result as any)?.markdown;
+  const status = (result as any)?.status;
+  const url = args.url as string;
+
+  return (
+    <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-chocolate-600 dark:text-chocolate-400">
+        <FileDown className="w-5 h-5" />
+        <span className="font-medium">Markdown Extraction</span>
+        {status && (
+          <Status status={status === "success" ? "online" : status === "error" ? "offline" : "degraded"} className="text-xs px-2 py-0.5 ml-auto">
+            <StatusIndicator />
+            <StatusLabel>{status}</StatusLabel>
+          </Status>
+        )}
+      </div>
+
+      <a 
+        href={url} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="text-sm text-chocolate-600 dark:text-chocolate-400 hover:underline flex items-center gap-1"
+      >
+        <Globe className="w-3 h-3" />
+        {url}
+      </a>
+
+      {isLoading && <LoadingIndicator label="Extracting markdown..." />}
+
+      {markdown && (
+        <Snippet className="bg-white/70 dark:bg-chocolate-950/60 border-chocolate-200 dark:border-chocolate-800" defaultValue="preview">
+          <SnippetHeader className="bg-chocolate-100 dark:bg-chocolate-800">
+            <div className="text-xs font-medium text-chocolate-600 dark:text-chocolate-200">Content</div>
+            <SnippetCopyButton className="text-chocolate-500 hover:text-chocolate-800" value={markdown} />
+          </SnippetHeader>
+          <SnippetTabsList>
+            <SnippetTabsTrigger value="preview">Preview</SnippetTabsTrigger>
+            <SnippetTabsTrigger value="raw">Raw</SnippetTabsTrigger>
+          </SnippetTabsList>
+          <SnippetTabsContent className="bg-chocolate-50 dark:bg-chocolate-900 max-h-64 overflow-auto" value="preview">
+            <div className="prose prose-sm dark:prose-invert max-w-none text-chocolate-700 dark:text-chocolate-200">
+              {markdown.slice(0, 2000)}{markdown.length > 2000 && "..."}
+            </div>
+          </SnippetTabsContent>
+          <SnippetTabsContent className="bg-chocolate-50 dark:bg-chocolate-900 max-h-64 overflow-auto" value="raw">
+            <pre className="text-xs whitespace-pre-wrap text-chocolate-700 dark:text-chocolate-200">{markdown}</pre>
+          </SnippetTabsContent>
+        </Snippet>
+      )}
+
+      {(result as any)?.reason && (
+        <div className="text-xs text-red-500">Error: {(result as any).reason}</div>
+      )}
+    </div>
+  );
+}
+
+function DeepcrawlReadUrlView({ args, result, isLoading }: { args: Record<string, unknown>; result?: Record<string, unknown>; isLoading: boolean }) {
+  const url = args.url as string;
+  const status = (result as any)?.status;
+  const title = (result as any)?.title;
+  const description = (result as any)?.description;
+  const markdown = (result as any)?.markdown;
+  const metadata = (result as any)?.metadata;
+  const cached = (result as any)?.cached;
+  const metrics = (result as any)?.metrics;
+
+  return (
+    <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-chocolate-600 dark:text-chocolate-400">
+        <Globe className="w-5 h-5" />
+        <span className="font-medium">Page Content</span>
+        {cached && (
+          <span className="text-xs bg-chocolate-200 dark:bg-chocolate-700 px-2 py-0.5 rounded-full">Cached</span>
+        )}
+        {status && (
+          <Status status={status === "success" ? "online" : "offline"} className="text-xs px-2 py-0.5 ml-auto">
+            <StatusIndicator />
+            <StatusLabel>{status}</StatusLabel>
+          </Status>
+        )}
+      </div>
+
+      <a 
+        href={url} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="text-sm text-chocolate-600 dark:text-chocolate-400 hover:underline flex items-center gap-1"
+      >
+        <ExternalLink className="w-3 h-3" />
+        {url}
+      </a>
+
+      {isLoading && <LoadingIndicator label="Reading page content..." />}
+
+      {title && (
+        <div className="p-3 bg-chocolate-100 dark:bg-chocolate-800 rounded-lg">
+          <h3 className="font-medium text-chocolate-800 dark:text-chocolate-200">{title}</h3>
+          {description && <p className="text-sm text-chocolate-600 dark:text-chocolate-400 mt-1">{description}</p>}
+        </div>
+      )}
+
+      {metrics && (
+        <div className="flex gap-3 text-xs text-chocolate-500">
+          {metrics.readableDuration && <span>Duration: {metrics.readableDuration}</span>}
+          {metrics.durationMs && <span>({metrics.durationMs}ms)</span>}
+        </div>
+      )}
+
+      {(markdown || metadata) && (
+        <Snippet className="bg-white/70 dark:bg-chocolate-950/60 border-chocolate-200 dark:border-chocolate-800" defaultValue="markdown">
+          <SnippetHeader className="bg-chocolate-100 dark:bg-chocolate-800">
+            <div className="text-xs font-medium text-chocolate-600 dark:text-chocolate-200">Content</div>
+            <SnippetCopyButton className="text-chocolate-500 hover:text-chocolate-800" value={markdown || JSON.stringify(metadata, null, 2)} />
+          </SnippetHeader>
+          <SnippetTabsList>
+            {markdown && <SnippetTabsTrigger value="markdown">Markdown</SnippetTabsTrigger>}
+            {metadata && <SnippetTabsTrigger value="metadata">Metadata</SnippetTabsTrigger>}
+          </SnippetTabsList>
+          {markdown && (
+            <SnippetTabsContent className="bg-chocolate-50 dark:bg-chocolate-900 max-h-64 overflow-auto" value="markdown">
+              <pre className="text-xs whitespace-pre-wrap text-chocolate-700 dark:text-chocolate-200">{markdown.slice(0, 3000)}{markdown.length > 3000 && "..."}</pre>
+            </SnippetTabsContent>
+          )}
+          {metadata && (
+            <SnippetTabsContent className="bg-chocolate-50 dark:bg-chocolate-900 max-h-64 overflow-auto" value="metadata">
+              <pre className="text-xs whitespace-pre-wrap text-chocolate-700 dark:text-chocolate-200">{JSON.stringify(metadata, null, 2)}</pre>
+            </SnippetTabsContent>
+          )}
+        </Snippet>
+      )}
+    </div>
+  );
+}
+
+interface LinkTreeNode {
+  url: string;
+  name?: string;
+  children?: LinkTreeNode[];
+  metadata?: { title?: string; description?: string };
+}
+
+function LinkTreeDisplay({ node, depth = 0 }: { node: LinkTreeNode; depth?: number }) {
+  const [isExpanded, setIsExpanded] = useState(depth < 2);
+  const hasChildren = node.children && node.children.length > 0;
+
+  return (
+    <div className={cn("text-xs", depth > 0 && "ml-4 border-l border-chocolate-200 dark:border-chocolate-700 pl-2")}>
+      <div 
+        className="flex items-center gap-1 py-1 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded px-1 cursor-pointer"
+        onClick={() => hasChildren && setIsExpanded(!isExpanded)}
+      >
+        {hasChildren && (
+          <span className="text-chocolate-400">{isExpanded ? "▼" : "▶"}</span>
+        )}
+        {!hasChildren && <span className="w-3" />}
+        <Link2 className="w-3 h-3 text-chocolate-400" />
+        <a 
+          href={node.url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-chocolate-600 dark:text-chocolate-300 hover:underline truncate max-w-[300px]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {node.name || node.metadata?.title || node.url}
+        </a>
+      </div>
+      {isExpanded && hasChildren && (
+        <div>
+          {node.children!.slice(0, 20).map((child, i) => (
+            <LinkTreeDisplay key={i} node={child} depth={depth + 1} />
+          ))}
+          {node.children!.length > 20 && (
+            <div className="text-chocolate-400 text-xs ml-4 py-1">
+              +{node.children!.length - 20} more...
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DeepcrawlLinksView({ toolName, args, result, isLoading }: { toolName: string; args: Record<string, unknown>; result?: Record<string, unknown>; isLoading: boolean }) {
+  const url = args.url as string;
+  const status = (result as any)?.status;
+  const tree = (result as any)?.tree as LinkTreeNode | undefined;
+  const extractedLinks = (result as any)?.extractedLinks;
+  const title = (result as any)?.title;
+  const cached = (result as any)?.cached;
+
+  const internalLinks = extractedLinks?.internal || [];
+  const externalLinks = extractedLinks?.external || [];
+
+  return (
+    <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-chocolate-600 dark:text-chocolate-400">
+        <TreePine className="w-5 h-5" />
+        <span className="font-medium">
+          {toolName === "deepcrawlExtractLinks" ? "Site Map" : "Link Extraction"}
+        </span>
+        {cached && (
+          <span className="text-xs bg-chocolate-200 dark:bg-chocolate-700 px-2 py-0.5 rounded-full">Cached</span>
+        )}
+        {status && (
+          <Status status={status === "success" ? "online" : "offline"} className="text-xs px-2 py-0.5 ml-auto">
+            <StatusIndicator />
+            <StatusLabel>{status}</StatusLabel>
+          </Status>
+        )}
+      </div>
+
+      <a 
+        href={url} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="text-sm text-chocolate-600 dark:text-chocolate-400 hover:underline flex items-center gap-1"
+      >
+        <Globe className="w-3 h-3" />
+        {title || url}
+      </a>
+
+      {isLoading && <LoadingIndicator label="Extracting links..." />}
+
+      {tree && (
+        <div className="bg-white dark:bg-chocolate-950 rounded-lg border border-chocolate-200 dark:border-chocolate-700 p-3 max-h-80 overflow-auto">
+          <LinkTreeDisplay node={tree} />
+        </div>
+      )}
+
+      {!tree && (internalLinks.length > 0 || externalLinks.length > 0) && (
+        <Snippet className="bg-white/70 dark:bg-chocolate-950/60 border-chocolate-200 dark:border-chocolate-800" defaultValue="internal">
+          <SnippetHeader className="bg-chocolate-100 dark:bg-chocolate-800">
+            <div className="text-xs font-medium text-chocolate-600 dark:text-chocolate-200">
+              {internalLinks.length + externalLinks.length} Links Found
+            </div>
+          </SnippetHeader>
+          <SnippetTabsList>
+            <SnippetTabsTrigger value="internal">Internal ({internalLinks.length})</SnippetTabsTrigger>
+            <SnippetTabsTrigger value="external">External ({externalLinks.length})</SnippetTabsTrigger>
+          </SnippetTabsList>
+          <SnippetTabsContent className="bg-chocolate-50 dark:bg-chocolate-900 max-h-48 overflow-auto" value="internal">
+            <div className="space-y-1">
+              {internalLinks.slice(0, 30).map((link: string, i: number) => (
+                <a 
+                  key={i}
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-xs text-chocolate-600 dark:text-chocolate-300 hover:underline truncate"
+                >
+                  {link}
+                </a>
+              ))}
+              {internalLinks.length > 30 && (
+                <div className="text-chocolate-400 text-xs">+{internalLinks.length - 30} more...</div>
+              )}
+            </div>
+          </SnippetTabsContent>
+          <SnippetTabsContent className="bg-chocolate-50 dark:bg-chocolate-900 max-h-48 overflow-auto" value="external">
+            <div className="space-y-1">
+              {externalLinks.slice(0, 30).map((link: string, i: number) => (
+                <a 
+                  key={i}
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-xs text-chocolate-600 dark:text-chocolate-300 hover:underline truncate"
+                >
+                  {link}
+                </a>
+              ))}
+              {externalLinks.length > 30 && (
+                <div className="text-chocolate-400 text-xs">+{externalLinks.length - 30} more...</div>
+              )}
+            </div>
+          </SnippetTabsContent>
+        </Snippet>
+      )}
+
+      {(result as any)?.reason && (
+        <div className="text-xs text-red-500">Error: {(result as any).reason}</div>
+      )}
     </div>
   );
 }

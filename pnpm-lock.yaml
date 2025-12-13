@@ -185,6 +185,9 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
+      deepcrawl:
+        specifier: ^0.5.4
+        version: 0.5.4
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
@@ -3324,6 +3327,10 @@ packages:
 
   deep-is@0.1.4:
     resolution: {integrity: sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ==}
+
+  deepcrawl@0.5.4:
+    resolution: {integrity: sha512-hgs4XkvlPPQMo5peLDrPNfG3otmIednUXSl/j2ZfL5FdD4zk15udLBCYQ5mT4Pic2bGOyy0OISIBiVy8xmxYaw==}
+    engines: {node: '>=18'}
 
   define-data-property@1.1.4:
     resolution: {integrity: sha512-rBMvIzlpA8v6E+SJZoo++HAYqsLrkg7MSfIinMPFhmkorw7X+dOXVJQs+QT69zGkzMyfDnIMN2Wid1+NbL3T+A==}
@@ -8731,6 +8738,10 @@ snapshots:
       character-entities: 2.0.2
 
   deep-is@0.1.4: {}
+
+  deepcrawl@0.5.4:
+    dependencies:
+      zod: 4.1.13
 
   define-data-property@1.1.4:
     dependencies:

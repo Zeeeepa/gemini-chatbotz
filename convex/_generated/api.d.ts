@@ -13,6 +13,7 @@ import type * as agent from "../agent.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as chatDb from "../chatDb.js";
+import type * as deepcrawl from "../deepcrawl.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as hyperbrowser from "../hyperbrowser.js";
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   chat: typeof chat;
   chatDb: typeof chatDb;
+  deepcrawl: typeof deepcrawl;
   files: typeof files;
   http: typeof http;
   hyperbrowser: typeof hyperbrowser;

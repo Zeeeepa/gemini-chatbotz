@@ -83,3 +83,13 @@ export const listMessages = query({
         return { ...paginated, streams };
     },
 });
+
+export const getThreadById = query({
+    args: { threadId: v.string() },
+    handler: async (ctx, { threadId }) => {
+        return await ctx.db
+            .query("userThreads")
+            .withIndex("by_thread", (q) => q.eq("threadId", threadId))
+            .first();
+    },
+});

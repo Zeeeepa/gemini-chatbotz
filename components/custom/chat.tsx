@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo } from "react";
-import { useAction } from "convex/react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUIMessages } from "@convex-dev/agent/react";
 import { Message as PreviewMessage } from "@/components/custom/message";
@@ -56,12 +56,28 @@ export function Chat({
     [session?.user?.id, userId]
   );
 
-  // Thread ID is null until created by @convex-dev/agent (not the same as the page id)
+  // Check if the page id corresponds to an existing thread
+  const existingThread = useQuery(api.chatDb.getThreadById, id ? { threadId: id } : "skip");
+  
+  // Initialize threadId - only use the page id if it's a valid existing thread
   const [threadId, setThreadId] = useState<string | null>(null);
+  const [threadChecked, setThreadChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedModel, setSelectedModel] = useState<OpenRouterModelId>(DEFAULT_MODEL);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Once the thread check completes, set the threadId if the thread exists
+  useEffect(() => {
+    if (existingThread !== undefined && !threadChecked) {
+      if (existingThread) {
+        // Thread exists in our database, use it
+        setThreadId(id);
+      }
+      // Mark as checked so we don't re-run this
+      setThreadChecked(true);
+    }
+  }, [existingThread, id, threadChecked]);
 
   const createThread = useAction(api.chat.createNewThread);
   // Use streamMessage for realtime streaming with Convex
