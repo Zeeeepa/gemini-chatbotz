@@ -6,7 +6,6 @@ import { Navbar } from "@/components/custom/navbar";
 import { ThemeProvider } from "@/components/custom/theme-provider";
 import { ConvexClientProvider } from "@/components/custom/convex-provider";
 import { ArtifactProvider } from "@/hooks/use-artifact";
-import { ArtifactPanel } from "@/components/custom/artifact-panel";
 
 import "./globals.css";
 
@@ -59,7 +58,6 @@ export default async function RootLayout({
               <Toaster position="top-center" />
               <Navbar />
               {children}
-              <ArtifactPanel />
             </ArtifactProvider>
           </ThemeProvider>
         </ConvexClientProvider>

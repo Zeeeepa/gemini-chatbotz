@@ -460,7 +460,7 @@ function ArtifactActions({
   );
 }
 
-// Main Artifact Panel Component
+// Main Artifact Panel Component - Inline split layout version
 function PureArtifactPanel({
   className,
   isReadonly = false,
@@ -469,7 +469,6 @@ function PureArtifactPanel({
   isReadonly?: boolean;
 }) {
   const { artifact, closeArtifact, setArtifact } = useArtifact();
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const language = artifact.language || getLanguageFromTitle(artifact.title);
 
@@ -488,107 +487,77 @@ function PureArtifactPanel({
   }
 
   return (
-    <AnimatePresence>
-      {artifact.isVisible && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={closeArtifact}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
-          />
-          
-          {/* Panel */}
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className={cn(
-              "fixed right-0 top-0 bottom-0 z-50 bg-white dark:bg-chocolate-950 shadow-2xl border-l border-chocolate-200 dark:border-chocolate-800 flex flex-col",
-              isExpanded ? "left-0" : "w-full max-w-2xl",
-              className
-            )}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-chocolate-100 dark:border-chocolate-800 bg-chocolate-50/80 dark:bg-chocolate-900/80 backdrop-blur-sm">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-chocolate-100 dark:bg-chocolate-800 text-chocolate-600 dark:text-chocolate-400">
-                  <KindIcon kind={artifact.kind} />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="text-sm font-semibold text-chocolate-900 dark:text-chocolate-100 truncate">
-                    {artifact.title || "Untitled"}
-                  </h2>
-                  <div className="flex items-center gap-2 text-xs text-chocolate-500">
-                    {artifact.kind === "code" && (
-                      <span className="px-1.5 py-0.5 bg-chocolate-100 dark:bg-chocolate-800 rounded text-chocolate-600 dark:text-chocolate-400">
-                        {language}
-                      </span>
-                    )}
-                    {artifact.status === "streaming" && (
-                      <span className="flex items-center gap-1 text-chocolate-600 dark:text-chocolate-400">
-                        <Spinner className="w-3 h-3" />
-                        Streaming...
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-1">
-                <ArtifactActions artifact={artifact} />
-                
-                <div className="w-px h-4 bg-chocolate-200 dark:bg-chocolate-700 mx-1" />
-                
-                <button
-                  type="button"
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
-                  title={isExpanded ? "Minimize" : "Maximize"}
-                >
-                  {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={closeArtifact}
-                  className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
-                  title="Close"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            
-            {/* Content */}
-            <div className="flex-1 overflow-hidden">
-              {artifact.kind === "code" ? (
-                <CodeContent
-                  content={artifact.content}
-                  language={language}
-                  title={artifact.title}
-                  onSave={handleContentSave}
-                  isReadonly={isReadonly || artifact.status === "streaming"}
-                />
-              ) : artifact.kind === "sheet" ? (
-                <div className="p-4 h-full overflow-auto">
-                  <SheetRenderer content={artifact.content} />
-                </div>
-              ) : (
-                <TextContent
-                  content={artifact.content}
-                  onSave={handleContentSave}
-                  isReadonly={isReadonly || artifact.status === "streaming"}
-                />
+    <div
+      className={cn(
+        "h-full w-full bg-white dark:bg-chocolate-950 flex flex-col",
+        className
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-chocolate-100 dark:border-chocolate-800 bg-chocolate-50/80 dark:bg-chocolate-900/80 backdrop-blur-sm shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-chocolate-100 dark:bg-chocolate-800 text-chocolate-600 dark:text-chocolate-400">
+            <KindIcon kind={artifact.kind} />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-chocolate-900 dark:text-chocolate-100 truncate">
+              {artifact.title || "Untitled"}
+            </h2>
+            <div className="flex items-center gap-2 text-xs text-chocolate-500">
+              {artifact.kind === "code" && (
+                <span className="px-1.5 py-0.5 bg-chocolate-100 dark:bg-chocolate-800 rounded text-chocolate-600 dark:text-chocolate-400">
+                  {language}
+                </span>
+              )}
+              {artifact.status === "streaming" && (
+                <span className="flex items-center gap-1 text-chocolate-600 dark:text-chocolate-400">
+                  <Spinner className="w-3 h-3" />
+                  Streaming...
+                </span>
               )}
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-1">
+          <ArtifactActions artifact={artifact} />
+          
+          <div className="w-px h-4 bg-chocolate-200 dark:bg-chocolate-700 mx-1" />
+          
+          <button
+            type="button"
+            onClick={closeArtifact}
+            className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
+            title="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+      
+      {/* Content */}
+      <div className="flex-1 overflow-hidden">
+        {artifact.kind === "code" ? (
+          <CodeContent
+            content={artifact.content}
+            language={language}
+            title={artifact.title}
+            onSave={handleContentSave}
+            isReadonly={isReadonly || artifact.status === "streaming"}
+          />
+        ) : artifact.kind === "sheet" ? (
+          <div className="p-4 h-full overflow-auto">
+            <SheetRenderer content={artifact.content} />
+          </div>
+        ) : (
+          <TextContent
+            content={artifact.content}
+            onSave={handleContentSave}
+            isReadonly={isReadonly || artifact.status === "streaming"}
+          />
+        )}
+      </div>
+    </div>
   );
 }
 

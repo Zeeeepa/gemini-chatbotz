@@ -22,6 +22,14 @@ import {
 } from "@/components/kibo-ui/banner";
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useArtifact, useArtifactSelector } from "@/hooks/use-artifact";
+import { ArtifactPanel } from "@/components/custom/artifact-panel";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
+import { cn } from "@/lib/utils";
 
 // File attachment type for uploaded files
 type FileAttachment = {
@@ -279,6 +287,61 @@ export function Chat({
 
   // Check if user is signed out - show banner if no authenticated user
   const isSignedOut = !session?.user?.id;
+  
+  // Get artifact visibility state for split layout
+  const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
+
+  // Messages panel content - extracted for reuse in both mobile and desktop layouts
+  const MessagesContent = (
+    <div className="flex flex-col justify-between items-center gap-4 w-full h-full">
+      <div
+        ref={messagesContainerRef}
+        className="flex flex-col gap-4 h-full w-full items-center overflow-y-scroll px-4"
+      >
+        {messages.length === 0 && <Overview />}
+
+        {messages.map((message, index) => {
+          const isLastMessage = index === messages.length - 1;
+          const messageIsStreaming = isLastMessage && message.role === "assistant" && isStreamingResponse;
+          
+          return (
+            <PreviewMessage
+              key={message.id}
+              chatId={threadId || id}
+              role={message.role}
+              content={message.text || ""}
+              toolInvocations={getToolInvocations(message.parts, message.id)}
+              attachments={[]}
+              reasoning={getReasoningFromParts(message.parts)}
+              isStreaming={messageIsStreaming}
+            />
+          );
+        })}
+
+        {/* Show thinking indicator when waiting for first response */}
+        {isLoading && !isStreamingResponse && (
+          <ThinkingMessage />
+        )}
+
+        <div ref={messagesEndRef} className="shrink-0 min-w-[24px] min-h-[24px]" />
+      </div>
+
+      <div className={cn(
+        "w-full px-4 pb-4",
+        !isArtifactVisible && "md:max-w-[858px] md:px-0"
+      )}>
+        <PromptInput
+          onSubmit={handleSubmit}
+          onStop={handleStop}
+          isLoading={isLoading || isStreamingResponse || isUploading}
+          isStreaming={isStreamingResponse}
+          placeholder={isUploading ? "Uploading files..." : "Ask about flights, weather, code, or upload a PDF..."}
+          selectedModel={selectedModel}
+          onModelChange={handleModelChange}
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-dvh bg-background pt-12">
@@ -301,53 +364,47 @@ export function Chat({
         </div>
       )}
       
-      <div className="flex flex-row justify-center pb-4 md:pb-8 flex-1 overflow-hidden">
-        <div className="flex flex-col justify-between items-center gap-4 w-full">
-          <div
-            ref={messagesContainerRef}
-            className="flex flex-col gap-4 h-full w-dvw items-center overflow-y-scroll"
-          >
-            {messages.length === 0 && <Overview />}
-
-            {messages.map((message, index) => {
-              const isLastMessage = index === messages.length - 1;
-              const messageIsStreaming = isLastMessage && message.role === "assistant" && isStreamingResponse;
-              
-              return (
-                <PreviewMessage
-                  key={message.id}
-                  chatId={threadId || id}
-                  role={message.role}
-                  content={message.text || ""}
-                  toolInvocations={getToolInvocations(message.parts, message.id)}
-                  attachments={[]}
-                  reasoning={getReasoningFromParts(message.parts)}
-                  isStreaming={messageIsStreaming}
-                />
-              );
-            })}
-
-            {/* Show thinking indicator when waiting for first response */}
-            {isLoading && !isStreamingResponse && (
-              <ThinkingMessage />
-            )}
-
-            <div ref={messagesEndRef} className="shrink-0 min-w-[24px] min-h-[24px]" />
-          </div>
-
-          <div className="w-full px-4 md:px-0 md:max-w-[858px]">
-            <PromptInput
-              onSubmit={handleSubmit}
-              onStop={handleStop}
-              isLoading={isLoading || isStreamingResponse || isUploading}
-              isStreaming={isStreamingResponse}
-              placeholder={isUploading ? "Uploading files..." : "Ask about flights, weather, code, or upload a PDF..."}
-              selectedModel={selectedModel}
-              onModelChange={handleModelChange}
-            />
-          </div>
-        </div>
+      {/* Mobile: Toggle between chat and artifact (no split) */}
+      <div className={cn(
+        "flex-1 overflow-hidden md:hidden",
+        isArtifactVisible && "hidden"
+      )}>
+        {MessagesContent}
       </div>
+      
+      <div className={cn(
+        "flex-1 overflow-hidden md:hidden",
+        !isArtifactVisible && "hidden"
+      )}>
+        <ArtifactPanel />
+      </div>
+
+      {/* Desktop: Full width when no artifact */}
+      {!isArtifactVisible && (
+        <div className="hidden md:flex flex-1 overflow-hidden justify-center">
+          {MessagesContent}
+        </div>
+      )}
+
+      {/* Desktop: Split layout when artifact is visible (30% chat, 70% artifact) */}
+      {isArtifactVisible && (
+        <ResizablePanelGroup
+          className="hidden md:flex flex-1 overflow-hidden"
+          direction="horizontal"
+        >
+          <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+            <div className="h-full overflow-hidden border-r border-border">
+              {MessagesContent}
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={70} minSize={50}>
+            <div className="h-full overflow-hidden">
+              <ArtifactPanel />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      )}
     </div>
   );
 }
