@@ -14,6 +14,14 @@ import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 import { upload } from "@vercel/blob/client";
 import { authClient } from "@/lib/auth-client";
+import {
+  Banner,
+  BannerAction,
+  BannerIcon,
+  BannerTitle,
+} from "@/components/kibo-ui/banner";
+import { Sparkles } from "lucide-react";
+import Link from "next/link";
 
 // File attachment type for uploaded files
 type FileAttachment = {
@@ -50,7 +58,7 @@ export function Chat({
   initialMessages?: Array<any>;
   userId?: string;
 }) {
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending: isSessionLoading } = authClient.useSession();
   const effectiveUserId = useMemo(
     () => session?.user?.id ?? userId ?? "guest-user-00000000-0000-0000-0000-000000000000",
     [session?.user?.id, userId]
@@ -269,51 +277,75 @@ export function Chat({
       }));
   };
 
+  // Check if user is signed out - show banner if no authenticated user
+  const isSignedOut = !session?.user?.id;
+
   return (
-    <div className="flex flex-row justify-center pb-4 md:pb-8 h-dvh bg-background">
-      <div className="flex flex-col justify-between items-center gap-4 w-full">
-        <div
-          ref={messagesContainerRef}
-          className="flex flex-col gap-4 h-full w-dvw items-center overflow-y-scroll"
-        >
-          {messages.length === 0 && <Overview />}
-
-          {messages.map((message, index) => {
-            const isLastMessage = index === messages.length - 1;
-            const messageIsStreaming = isLastMessage && message.role === "assistant" && isStreamingResponse;
-            
-            return (
-              <PreviewMessage
-                key={message.id}
-                chatId={threadId || id}
-                role={message.role}
-                content={message.text || ""}
-                toolInvocations={getToolInvocations(message.parts, message.id)}
-                attachments={[]}
-                reasoning={getReasoningFromParts(message.parts)}
-                isStreaming={messageIsStreaming}
-              />
-            );
-          })}
-
-          {/* Show thinking indicator when waiting for first response */}
-          {isLoading && !isStreamingResponse && (
-            <ThinkingMessage />
-          )}
-
-          <div ref={messagesEndRef} className="shrink-0 min-w-[24px] min-h-[24px]" />
+    <div className="flex flex-col h-dvh bg-background pt-12">
+      {/* Sign-in banner for signed-out users - positioned below navbar */}
+      {isSignedOut && (
+        <div className="flex w-full items-center justify-center md:justify-between gap-3 bg-gradient-to-r from-chocolate-600 to-chocolate-500 px-4 md:px-6 py-3 text-white shrink-0 shadow-md z-20">
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex rounded-full border border-white/20 bg-white/10 p-2 shadow-sm">
+              <Sparkles size={20} />
+            </div>
+            <p className="text-sm md:text-base font-medium text-center md:text-left">
+              Sign in to save your conversations and access all features
+            </p>
+          </div>
+          <Link href="/login" className="shrink-0">
+            <button className="rounded-md px-4 py-2 text-sm font-semibold bg-white text-chocolate-600 hover:bg-white/90 shadow-sm transition-colors">
+              Sign In
+            </button>
+          </Link>
         </div>
+      )}
+      
+      <div className="flex flex-row justify-center pb-4 md:pb-8 flex-1 overflow-hidden">
+        <div className="flex flex-col justify-between items-center gap-4 w-full">
+          <div
+            ref={messagesContainerRef}
+            className="flex flex-col gap-4 h-full w-dvw items-center overflow-y-scroll"
+          >
+            {messages.length === 0 && <Overview />}
 
-        <div className="w-full px-4 md:px-0 md:max-w-[858px]">
-          <PromptInput
-            onSubmit={handleSubmit}
-            onStop={handleStop}
-            isLoading={isLoading || isStreamingResponse || isUploading}
-            isStreaming={isStreamingResponse}
-            placeholder={isUploading ? "Uploading files..." : "Ask about flights, weather, code, or upload a PDF..."}
-            selectedModel={selectedModel}
-            onModelChange={handleModelChange}
-          />
+            {messages.map((message, index) => {
+              const isLastMessage = index === messages.length - 1;
+              const messageIsStreaming = isLastMessage && message.role === "assistant" && isStreamingResponse;
+              
+              return (
+                <PreviewMessage
+                  key={message.id}
+                  chatId={threadId || id}
+                  role={message.role}
+                  content={message.text || ""}
+                  toolInvocations={getToolInvocations(message.parts, message.id)}
+                  attachments={[]}
+                  reasoning={getReasoningFromParts(message.parts)}
+                  isStreaming={messageIsStreaming}
+                />
+              );
+            })}
+
+            {/* Show thinking indicator when waiting for first response */}
+            {isLoading && !isStreamingResponse && (
+              <ThinkingMessage />
+            )}
+
+            <div ref={messagesEndRef} className="shrink-0 min-w-[24px] min-h-[24px]" />
+          </div>
+
+          <div className="w-full px-4 md:px-0 md:max-w-[858px]">
+            <PromptInput
+              onSubmit={handleSubmit}
+              onStop={handleStop}
+              isLoading={isLoading || isStreamingResponse || isUploading}
+              isStreaming={isStreamingResponse}
+              placeholder={isUploading ? "Uploading files..." : "Ask about flights, weather, code, or upload a PDF..."}
+              selectedModel={selectedModel}
+              onModelChange={handleModelChange}
+            />
+          </div>
         </div>
       </div>
     </div>

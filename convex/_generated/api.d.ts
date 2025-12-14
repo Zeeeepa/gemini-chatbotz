@@ -17,6 +17,7 @@ import type * as deepcrawl from "../deepcrawl.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as hyperbrowser from "../hyperbrowser.js";
+import type * as memories from "../memories.js";
 import type * as reservations from "../reservations.js";
 
 import type {
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   http: typeof http;
   hyperbrowser: typeof hyperbrowser;
+  memories: typeof memories;
   reservations: typeof reservations;
 }>;
 

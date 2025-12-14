@@ -5,12 +5,10 @@ import cx from "classnames";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 type MinimalUser = { id?: string | null; email?: string | null };
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import useSWR from "swr";
-
-import { Chat } from "@/db/schema";
-import { fetcher, getTitleFromChat } from "@/lib/utils";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 import {
   InfoIcon,
@@ -46,42 +44,32 @@ import {
 
 export const History = ({ user }: { user?: MinimalUser | null }) => {
   const { id } = useParams();
-  const pathname = usePathname();
 
   const [isHistoryVisible, setIsHistoryVisible] = useState(false);
-  const {
-    data: history,
-    isLoading,
-    mutate,
-  } = useSWR<Array<Chat>>(user ? "/api/history" : null, fetcher, {
-    fallbackData: [],
-  });
-
-  useEffect(() => {
-    mutate();
-  }, [pathname, mutate]);
+  
+  // Use Convex query for thread history instead of old /api/history endpoint
+  const threads = useQuery(
+    api.chatDb.getUserThreads,
+    user?.id ? { userId: user.id } : "skip"
+  );
+  const deleteThreadMutation = useMutation(api.chatDb.deleteThread);
+  
+  const isLoading = threads === undefined;
+  const history = threads ?? [];
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleDelete = async () => {
-    const deletePromise = fetch(`/api/chat?id=${deleteId}`, {
-      method: "DELETE",
-    });
-
-    toast.promise(deletePromise, {
-      loading: "Deleting chat...",
-      success: () => {
-        mutate((history) => {
-          if (history) {
-            return history.filter((h) => h.id !== id);
-          }
-        });
-        return "Chat deleted successfully";
-      },
-      error: "Failed to delete chat",
-    });
-
+    if (!deleteId) return;
+    
+    try {
+      await deleteThreadMutation({ threadId: deleteId });
+      toast.success("Chat deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete chat");
+    }
+    
     setShowDeleteDialog(false);
   };
 
@@ -164,12 +152,12 @@ export const History = ({ user }: { user?: MinimalUser | null }) => {
               ) : null}
 
               {history &&
-                history.map((chat) => (
+                history.map((thread) => (
                   <div
-                    key={chat.id}
+                    key={thread.threadId}
                     className={cx(
                       "flex flex-row items-center gap-6 hover:bg-chocolate-200 dark:hover:bg-chocolate-700 rounded-md pr-2",
-                      { "bg-chocolate-200 dark:bg-chocolate-700": chat.id === id },
+                      { "bg-chocolate-200 dark:bg-chocolate-700": thread.threadId === id },
                     )}
                   >
                     <Button
@@ -180,10 +168,10 @@ export const History = ({ user }: { user?: MinimalUser | null }) => {
                       asChild
                     >
                       <Link
-                        href={`/chat/${chat.id}`}
+                        href={`/chat/${thread.threadId}`}
                         className="text-ellipsis overflow-hidden text-left py-2 pl-2 rounded-lg outline-chocolate-900"
                       >
-                        {getTitleFromChat(chat)}
+                        {thread.title || "New Chat"}
                       </Link>
                     </Button>
 
@@ -202,7 +190,7 @@ export const History = ({ user }: { user?: MinimalUser | null }) => {
                             className="flex flex-row gap-2 items-center justify-start w-full h-fit font-normal p-1.5 rounded-sm"
                             variant="ghost"
                             onClick={() => {
-                              setDeleteId(chat.id);
+                              setDeleteId(thread.threadId);
                               setShowDeleteDialog(true);
                             }}
                           >

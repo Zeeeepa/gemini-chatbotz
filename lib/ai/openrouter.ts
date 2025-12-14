@@ -59,7 +59,7 @@ export const OPENROUTER_MODELS: ModelDefinition[] = [
     id: "openai/gpt-5.2",
     name: "GPT-5.2",
     provider: "OpenAI",
-    description: "Latest frontier-grade model in the GPT-5 series, offering stronger agentic and long context performance compared to GPT-5.1. Uses adaptive reasoning to allocate computation dynamically, responding quickly to simple queries while spending more depth on complex tasks. Built for broad task coverage, GPT-5.2 delivers consistent gains across math, coding, science, and tool calling workloads, with more coherent long-form answers and improved tool-use reliability.",
+    description: "Latest frontier-grade model in the GPT-5 series with adaptive reasoning for dynamic computation allocation.",
     contextLength: 400000,
     maxOutput: 65536,
     pricing: { prompt: 0.00175, completion: 0.014 },

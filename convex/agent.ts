@@ -1,6 +1,6 @@
 import { Agent, createTool } from "@convex-dev/agent";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { components, internal } from "./_generated/api";
+import { components, internal, api } from "./_generated/api";
 import { z } from "zod";
 
 const openrouter = createOpenRouter({
@@ -280,6 +280,49 @@ When writing code:
 - Follow existing patterns and conventions in the codebase.
 - Reuse existing abstractions; follow DRY principle.
 </coding_guidelines>
+
+<memory_system>
+PERSISTENT MEMORY TOOLS:
+You have access to a memory system that stores important information about the user across conversations.
+
+AVAILABLE TOOLS:
+- addMemory: Store important discoveries, preferences, or context about the user
+- listMemories: Recall previously stored information
+- removeMemory: Delete outdated or incorrect memories
+- updateMemory: Update existing memories with new information
+
+MEMORY CATEGORIES:
+- PREFERENCES: Communication style, formatting preferences, technical level
+- CONTEXT: Background info, current projects, goals, constraints
+- PATTERNS: Common requests, workflows, habits
+- HISTORY: Important past interactions, decisions made
+- SKILLS: Technical skills, expertise areas, experience level
+- ARCHITECTURE: Tech stack decisions, system design patterns
+- BUGS: Known issues, debugging insights, workarounds
+- TESTING: Test strategies, frameworks, requirements
+- CONFIG: Configuration patterns, environment setup
+- GENERAL: Other important information
+
+WHEN TO ADD MEMORIES:
+✅ User expresses a preference ("I prefer concise responses")
+✅ User shares context ("I'm working on a Next.js project")
+✅ User demonstrates expertise or skill level
+✅ Important decisions are made in the conversation
+✅ User corrects you on something important
+
+WHEN TO LIST MEMORIES:
+✅ At the start of a new conversation to recall user context
+✅ Before making assumptions about user preferences
+✅ When the user references something from a past conversation
+
+BEST PRACTICES:
+1. Check memories at conversation start to personalize responses
+2. Add memories immediately when you discover important user context
+3. Keep memories CONCISE but ACTIONABLE
+4. Use SPECIFIC categories—don't default to GENERAL
+5. Update memories when information changes rather than creating duplicates
+6. Remove outdated memories to keep the system accurate
+</memory_system>
 
 <frontend_aesthetics>
 When creating frontends, avoid generic "AI slop" aesthetics:
@@ -892,6 +935,173 @@ Supports: multiple aspect ratios, style controls, identity preservation (up to 5
     handler: async (ctx, args) => {
       const result = await ctx.runAction(internal.actions.generateImageWithNanoBanana, args);
       return result;
+    },
+  }),
+
+  // ==========================================================================
+  // Memory System (Persistent User Personalization)
+  // ==========================================================================
+  addMemory: createTool({
+    description: `Store important information about the user for future reference and personalization.
+Use this to remember:
+- User preferences (communication style, formatting preferences, technical level)
+- Project context (what they're working on, goals, constraints)
+- Important patterns (common requests, workflows, habits)
+- Technical skills and expertise areas
+- Past decisions and their reasoning`,
+    args: z.object({
+      content: z.string().describe("Concise memory content to store - should be actionable and specific"),
+      category: z.enum([
+        "PREFERENCES",   // User preferences, settings, communication style
+        "CONTEXT",       // Background info, projects, goals
+        "PATTERNS",      // User's common patterns, workflows, habits
+        "HISTORY",       // Important past interactions, decisions
+        "SKILLS",        // User's technical skills, expertise areas
+        "ARCHITECTURE",  // System design, tech stack, patterns
+        "BUGS",          // Known issues, debugging insights, workarounds
+        "TESTING",       // Test patterns, frameworks, requirements
+        "CONFIG",        // Configuration patterns, environment variables
+        "GENERAL",       // Other important context
+      ]).describe("Category for organizing the memory"),
+      importance: z.number().min(1).max(10).optional().describe("Importance score 1-10 (default 5)"),
+      explanation: z.string().describe("Why this memory is being added"),
+    }),
+    handler: async (ctx, { content, category, importance, explanation }) => {
+      console.log(`[ADD_MEMORY] ${explanation}`);
+      
+      // Get userId from thread context - for now use a placeholder approach
+      // In production, this would come from the thread/session context
+      const userId = "default-user"; // Will be overridden by chat action context
+      
+      const result = await ctx.runMutation((api as any).memories.create, {
+        content,
+        category,
+        userId,
+        importance,
+      });
+
+      return {
+        success: true,
+        memoryId: result.memoryId,
+        message: `Memory added: ${content}`,
+      };
+    },
+  }),
+
+  listMemories: createTool({
+    description: `Retrieve stored memories about the user. Use at the start of conversations to recall context and preferences.`,
+    args: z.object({
+      category: z.enum([
+        "PREFERENCES",
+        "CONTEXT",
+        "PATTERNS",
+        "HISTORY",
+        "SKILLS",
+        "ARCHITECTURE",
+        "BUGS",
+        "TESTING",
+        "CONFIG",
+        "GENERAL",
+      ]).optional().describe("Filter by category (optional)"),
+      explanation: z.string().describe("Why memories are being listed"),
+    }),
+    handler: async (ctx, { category, explanation }) => {
+      console.log(`[LIST_MEMORIES] ${explanation}`);
+      
+      const userId = "default-user"; // Will be overridden by chat action context
+      
+      let memories;
+      if (category) {
+        memories = await ctx.runQuery((api as any).memories.byUserAndCategory, {
+          userId,
+          category,
+        });
+      } else {
+        memories = await ctx.runQuery((api as any).memories.byUser, {
+          userId,
+        });
+      }
+
+      return {
+        success: true,
+        memories: memories.map((m: any) => ({
+          id: m._id,
+          content: m.content,
+          category: m.category,
+          importance: m.importance,
+          createdAt: new Date(m.createdAt).toISOString(),
+        })),
+        count: memories.length,
+      };
+    },
+  }),
+
+  removeMemory: createTool({
+    description: `Remove a previously stored memory that is no longer relevant or accurate.`,
+    args: z.object({
+      memoryId: z.string().describe("ID of the memory to remove"),
+      explanation: z.string().describe("Why this memory is being removed"),
+    }),
+    handler: async (ctx, { memoryId, explanation }) => {
+      console.log(`[REMOVE_MEMORY] ${explanation}`);
+      
+      try {
+        await ctx.runMutation((api as any).memories.remove, {
+          memoryId: memoryId as any,
+        });
+        return {
+          success: true,
+          message: `Memory removed successfully`,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: "Memory not found or access denied",
+        };
+      }
+    },
+  }),
+
+  updateMemory: createTool({
+    description: `Update an existing memory with new or corrected information.`,
+    args: z.object({
+      memoryId: z.string().describe("ID of the memory to update"),
+      content: z.string().optional().describe("New content for the memory"),
+      category: z.enum([
+        "PREFERENCES",
+        "CONTEXT",
+        "PATTERNS",
+        "HISTORY",
+        "SKILLS",
+        "ARCHITECTURE",
+        "BUGS",
+        "TESTING",
+        "CONFIG",
+        "GENERAL",
+      ]).optional().describe("New category"),
+      importance: z.number().min(1).max(10).optional().describe("New importance score"),
+      explanation: z.string().describe("Why this memory is being updated"),
+    }),
+    handler: async (ctx, { memoryId, content, category, importance, explanation }) => {
+      console.log(`[UPDATE_MEMORY] ${explanation}`);
+      
+      try {
+        await ctx.runMutation((api as any).memories.update, {
+          memoryId: memoryId as any,
+          content,
+          category,
+          importance,
+        });
+        return {
+          success: true,
+          message: `Memory updated successfully`,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: "Memory not found or update failed",
+        };
+      }
     },
   }),
 };
