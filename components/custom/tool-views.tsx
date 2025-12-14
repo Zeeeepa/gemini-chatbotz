@@ -440,6 +440,8 @@ function WeatherView({ args, result, isLoading }: { args: Record<string, unknown
 function ImageGenerationView({ args, result, isLoading }: { args: Record<string, unknown>; result?: Record<string, unknown>; isLoading: boolean }) {
   const style = (args.style as string) || (result as any)?.style || "realistic";
   const aspectRatio = (args.aspectRatio as string) || (result as any)?.aspectRatio || "1:1";
+  const { openArtifact } = useArtifact();
+  const hasAutoOpened = useRef(false);
   
   // Handle different response formats
   const images = (result as any)?.images as Array<{ url: string; title?: string }> | undefined;
@@ -451,6 +453,26 @@ function ImageGenerationView({ args, result, isLoading }: { args: Record<string,
   if (imageUrl) allImages.push(imageUrl);
   if (imageUrls) allImages.push(...imageUrls);
   if (images) allImages.push(...images.map(img => img.url));
+
+  // Auto-open artifact when image is generated
+  useEffect(() => {
+    if (allImages.length > 0 && !hasAutoOpened.current) {
+      hasAutoOpened.current = true;
+      // Create HTML content to display image(s)
+      const imageHtml = allImages.map((url, i) => 
+        `<figure class="image-container"><img src="${url}" alt="Generated image ${i + 1}" style="max-width: 100%; height: auto; border-radius: 8px;" /><figcaption>Image ${i + 1}</figcaption></figure>`
+      ).join('\n');
+      
+      openArtifact({
+        documentId: `image-${Date.now()}`,
+        title: (args.prompt as string)?.slice(0, 50) || "Generated Image",
+        kind: "text",
+        content: imageHtml,
+        messageId: "",
+        status: "idle",
+      });
+    }
+  }, [allImages.length, args.prompt, openArtifact]);
   
   return (
     <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
@@ -819,6 +841,25 @@ function HyperbrowserScrapeView({ toolName, args, result, isLoading }: { toolNam
   const liveUrl = (result as any)?.liveUrl;
   const data = (result as any)?.data;
   const status = (result as any)?.status;
+  const { openArtifact } = useArtifact();
+  const hasAutoOpened = useRef(false);
+
+  // Auto-open artifact when data is scraped
+  useEffect(() => {
+    if (data && !hasAutoOpened.current) {
+      hasAutoOpened.current = true;
+      const content = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+      openArtifact({
+        documentId: `scrape-${Date.now()}`,
+        title: `Scraped: ${(args.url as string) || "Page Content"}`,
+        kind: typeof data === "string" ? "text" : "code",
+        content,
+        language: typeof data === "string" ? undefined : "json",
+        messageId: "",
+        status: "idle",
+      });
+    }
+  }, [data, args.url, openArtifact]);
 
   return (
     <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
@@ -894,6 +935,23 @@ function DeepcrawlMarkdownView({ args, result, isLoading }: { args: Record<strin
   const markdown = (result as any)?.markdown;
   const status = (result as any)?.status;
   const url = args.url as string;
+  const { openArtifact } = useArtifact();
+  const hasAutoOpened = useRef(false);
+
+  // Auto-open artifact when markdown is extracted
+  useEffect(() => {
+    if (markdown && !hasAutoOpened.current) {
+      hasAutoOpened.current = true;
+      openArtifact({
+        documentId: `markdown-${Date.now()}`,
+        title: `Content from ${new URL(url).hostname}`,
+        kind: "text",
+        content: markdown,
+        messageId: "",
+        status: "idle",
+      });
+    }
+  }, [markdown, url, openArtifact]);
 
   return (
     <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
@@ -957,6 +1015,23 @@ function DeepcrawlReadUrlView({ args, result, isLoading }: { args: Record<string
   const metadata = (result as any)?.metadata;
   const cached = (result as any)?.cached;
   const metrics = (result as any)?.metrics;
+  const { openArtifact } = useArtifact();
+  const hasAutoOpened = useRef(false);
+
+  // Auto-open artifact when page content is read
+  useEffect(() => {
+    if (markdown && !hasAutoOpened.current) {
+      hasAutoOpened.current = true;
+      openArtifact({
+        documentId: `page-${Date.now()}`,
+        title: title || `Content from ${new URL(url).hostname}`,
+        kind: "text",
+        content: markdown,
+        messageId: "",
+        status: "idle",
+      });
+    }
+  }, [markdown, title, url, openArtifact]);
 
   return (
     <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
