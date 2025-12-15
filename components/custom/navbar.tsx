@@ -46,10 +46,10 @@ export const Navbar = () => {
         <History user={session?.user as any} />
         <div className="flex flex-row gap-2 items-center">
           <Image
-            src="/images/gemini-logo.png"
+            src="/images/black-dots-transparent.svg"
             height={20}
             width={20}
-            alt="gemini logo"
+            alt="logo"
           />
           <div className="text-chocolate-500">
             <SlashIcon size={16} />
