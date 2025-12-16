@@ -64,7 +64,7 @@ function KindIcon({ kind, className }: { kind: ArtifactKind; className?: string 
 // Sheet Renderer
 function SheetRenderer({ content }: { content: string }) {
   const lines = content.split("\n").filter((line) => line.trim());
-  if (lines.length === 0) return <p className="text-chocolate-500">Empty spreadsheet</p>;
+  if (lines.length === 0) return <p className="text-neutral-600 dark:text-neutral-400">Empty spreadsheet</p>;
   const rows = lines.map((line) => line.split(",").map((cell) => cell.trim()));
   
   return (
@@ -75,7 +75,7 @@ function SheetRenderer({ content }: { content: string }) {
             {rows[0]?.map((cell, i) => (
               <th
                 key={i}
-                className="px-4 py-2 text-left text-xs font-medium text-chocolate-500 uppercase tracking-wider border-r border-chocolate-200 dark:border-chocolate-700 last:border-r-0"
+                className="px-4 py-2 text-left text-xs font-medium text-neutral-700 dark:text-neutral-300 uppercase tracking-wider border-r border-chocolate-200 dark:border-chocolate-700 last:border-r-0"
               >
                 {cell}
               </th>
@@ -86,7 +86,7 @@ function SheetRenderer({ content }: { content: string }) {
           {rows.slice(1).map((row, rowIndex) => (
             <tr key={rowIndex} className="hover:bg-chocolate-50 dark:hover:bg-chocolate-900">
               {row.map((cell, cellIndex) => (
-                <td key={cellIndex} className="px-4 py-2 text-sm text-chocolate-900 dark:text-chocolate-100 border-r border-chocolate-200 dark:border-chocolate-700 last:border-r-0">
+                <td key={cellIndex} className="px-4 py-2 text-sm text-neutral-900 dark:text-white border-r border-chocolate-200 dark:border-chocolate-700 last:border-r-0">
                   {cell}
                 </td>
               ))}
@@ -269,7 +269,7 @@ function CodeContent({
           defaultValue={shikiLang}
         >
           <CodeBlockHeader className="bg-chocolate-50 dark:bg-chocolate-900 border-b border-chocolate-200 dark:border-chocolate-700">
-            <div className="flex items-center gap-2 px-3 text-sm text-chocolate-600 dark:text-chocolate-400">
+            <div className="flex items-center gap-2 px-3 text-sm text-neutral-800 dark:text-neutral-200">
               <FileCode className="w-4 h-4" />
               <span>{title || `code.${language}`}</span>
             </div>
@@ -301,7 +301,7 @@ function CodeContent({
             setLocalContent(e.target.value);
             onSave?.(e.target.value);
           }}
-          className="w-full h-full p-4 font-mono text-sm bg-chocolate-900 text-chocolate-100 resize-none focus:outline-none"
+          className="w-full h-full p-4 font-mono text-sm bg-neutral-900 text-white resize-none focus:outline-none"
           spellCheck={false}
           aria-label="Code editor"
           placeholder="Enter code..."
@@ -327,7 +327,7 @@ function CodeContent({
           </div>
           
           {output && (
-            <div className="p-4 bg-chocolate-900 text-chocolate-100 font-mono text-sm max-h-48 overflow-auto">
+            <div className="p-4 bg-neutral-900 text-white font-mono text-sm max-h-48 overflow-auto">
               <pre className="whitespace-pre-wrap">{output}</pre>
             </div>
           )}
@@ -356,7 +356,7 @@ function TextContent({
   if (isReadonly) {
     return (
       <div className="p-4 prose prose-sm max-w-none h-full overflow-auto">
-        <pre className="whitespace-pre-wrap font-sans text-chocolate-800 dark:text-chocolate-200">{content}</pre>
+        <pre className="whitespace-pre-wrap font-sans text-neutral-900 dark:text-white">{content}</pre>
       </div>
     );
   }
@@ -368,7 +368,7 @@ function TextContent({
         setLocalContent(e.target.value);
         onSave?.(e.target.value);
       }}
-      className="w-full h-full p-4 text-sm text-chocolate-800 dark:text-chocolate-200 bg-white dark:bg-chocolate-950 resize-none focus:outline-none"
+      className="w-full h-full p-4 text-sm text-neutral-900 dark:text-white bg-white dark:bg-neutral-950 resize-none focus:outline-none"
       spellCheck={true}
       aria-label="Text editor"
       placeholder="Enter text..."
@@ -418,19 +418,19 @@ function ArtifactActions({
             type="button"
             onClick={() => onVersionChange?.("prev")}
             disabled={currentVersionIndex === 0}
-            className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1.5 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             title="Previous version"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-xs text-chocolate-500 px-1">
+          <span className="text-xs text-neutral-700 dark:text-neutral-300 px-1">
             {(currentVersionIndex || 0) + 1} / {totalVersions}
           </span>
           <button
             type="button"
             onClick={() => onVersionChange?.("next")}
             disabled={currentVersionIndex === totalVersions - 1}
-            className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1.5 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             title="Next version"
           >
             <ChevronRight className="w-4 h-4" />
@@ -442,7 +442,7 @@ function ArtifactActions({
       <button
         type="button"
         onClick={handleCopy}
-        className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
+        className="p-1.5 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
         title="Copy to clipboard"
       >
         {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
@@ -451,7 +451,7 @@ function ArtifactActions({
       <button
         type="button"
         onClick={handleDownload}
-        className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
+        className="p-1.5 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
         title="Download"
       >
         <Download className="w-4 h-4" />
@@ -496,21 +496,21 @@ function PureArtifactPanel({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-chocolate-100 dark:border-chocolate-800 bg-chocolate-50/80 dark:bg-chocolate-900/80 backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-chocolate-100 dark:bg-chocolate-800 text-chocolate-600 dark:text-chocolate-400">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-chocolate-100 dark:bg-chocolate-800 text-neutral-700 dark:text-neutral-300">
             <KindIcon kind={artifact.kind} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-chocolate-900 dark:text-chocolate-100 truncate">
+            <h2 className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
               {artifact.title || "Untitled"}
             </h2>
-            <div className="flex items-center gap-2 text-xs text-chocolate-500">
+            <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
               {artifact.kind === "code" && (
-                <span className="px-1.5 py-0.5 bg-chocolate-100 dark:bg-chocolate-800 rounded text-chocolate-600 dark:text-chocolate-400">
+                <span className="px-1.5 py-0.5 bg-chocolate-100 dark:bg-chocolate-800 rounded text-neutral-700 dark:text-neutral-300">
                   {language}
                 </span>
               )}
               {artifact.status === "streaming" && (
-                <span className="flex items-center gap-1 text-chocolate-600 dark:text-chocolate-400">
+                <span className="flex items-center gap-1 text-neutral-600 dark:text-neutral-400">
                   <Spinner className="w-3 h-3" />
                   Streaming...
                 </span>
@@ -527,7 +527,7 @@ function PureArtifactPanel({
           <button
             type="button"
             onClick={closeArtifact}
-            className="p-1.5 text-chocolate-500 hover:text-chocolate-900 dark:hover:text-chocolate-100 hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
+            className="p-1.5 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
             title="Close"
           >
             <X className="w-4 h-4" />
@@ -600,12 +600,12 @@ export function ArtifactPreviewButton({
         className
       )}
     >
-      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-chocolate-100 dark:bg-chocolate-800 text-chocolate-600 dark:text-chocolate-400 group-hover:bg-chocolate-200 dark:group-hover:bg-chocolate-700 transition-colors">
+      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-chocolate-100 dark:bg-chocolate-800 text-neutral-700 dark:text-neutral-300 group-hover:bg-chocolate-200 dark:group-hover:bg-chocolate-700 transition-colors">
         <KindIcon kind={artifact.kind} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-chocolate-900 dark:text-chocolate-100 truncate">{artifact.title}</p>
-        <p className="text-xs text-chocolate-500">
+        <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">{artifact.title}</p>
+        <p className="text-xs text-neutral-600 dark:text-neutral-400">
           {artifact.kind === "code"
             ? getLanguageFromTitle(artifact.title)
             : artifact.kind === "sheet"
@@ -613,7 +613,7 @@ export function ArtifactPreviewButton({
             : "Document"}
         </p>
       </div>
-      <Maximize2 className="w-4 h-4 text-chocolate-400 group-hover:text-chocolate-600 dark:group-hover:text-chocolate-300 transition-colors" />
+      <Maximize2 className="w-4 h-4 text-neutral-500 group-hover:text-neutral-700 dark:text-neutral-400 dark:group-hover:text-neutral-200 transition-colors" />
     </button>
   );
 }

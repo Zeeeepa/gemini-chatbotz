@@ -1,24 +1,29 @@
 "use client";
 
 import type React from "react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight,
-  AudioWaveform,
+  ArrowUp,
+  Camera,
   ChevronDown,
+  FileText,
+  Lightbulb,
   Loader2,
-  Paperclip,
-  Sparkles,
+  MousePointer2,
+  Plug,
+  Settings,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { OPENROUTER_MODELS, type OpenRouterModelId } from "@/lib/ai/openrouter";
+import { OPENROUTER_MODELS, type OpenRouterModelId, type ModelDefinition } from "@/lib/ai/openrouter";
+import { useArtifact } from "@/hooks/use-artifact";
 
 type PromptInputProps = {
   onSubmit: (value: string, attachments?: File[], modelId?: OpenRouterModelId) => void;
@@ -44,8 +49,33 @@ type RichTextEditorProps = {
   onStop?: () => void;
 };
 
+// Group models by provider
+function getModelsByProvider(): { provider: string; models: ModelDefinition[] }[] {
+  const grouped = OPENROUTER_MODELS.reduce((acc, model) => {
+    if (!acc[model.provider]) {
+      acc[model.provider] = [];
+    }
+    acc[model.provider].push(model);
+    return acc;
+  }, {} as Record<string, ModelDefinition[]>);
+
+  return Object.entries(grouped).map(([provider, models]) => ({
+    provider,
+    models,
+  }));
+}
+
+function SparkleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <title>Sparkle</title>
+      <path d="M12 2L13.09 8.26L18 6L15.74 10.91L22 12L15.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L8.26 13.09L2 12L8.26 10.91L6 6L10.91 8.26L12 2Z" />
+    </svg>
+  );
+}
+
 function RichTextEditor({
-  placeholder = "Build features, fix bugs, and understand codebases...",
+  placeholder = "Plan, @ for context, ...",
   value,
   onChange,
   onSubmit,
@@ -57,10 +87,25 @@ function RichTextEditor({
   onStop,
 }: RichTextEditorProps) {
   const [isFocused, setIsFocused] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const contentEditableRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [reasoningEnabled, setReasoningEnabled] = useState(false);
+  const { openArtifact } = useArtifact();
 
   const isEmpty = value.trim().length === 0;
+  const modelsByProvider = useMemo(() => getModelsByProvider(), []);
+
+  const currentModel = useMemo(() => {
+    return OPENROUTER_MODELS.find((m) => m.id === selectedModel);
+  }, [selectedModel]);
+
+  const handleInput = useCallback(() => {
+    if (contentEditableRef.current) {
+      const text = contentEditableRef.current.innerText;
+      onChange(text === "\n" ? "" : text);
+    }
+  }, [onChange]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -72,25 +117,51 @@ function RichTextEditor({
         return;
       }
 
-      onSubmit(value, attachments.length > 0 ? attachments : undefined);
+      let currentMessage = value;
+      if (contentEditableRef.current) {
+        const text = contentEditableRef.current.innerText;
+        currentMessage = text === "\n" ? "" : text;
+        if (currentMessage !== value) {
+          onChange(currentMessage);
+        }
+      }
+
+      onSubmit(currentMessage, attachments.length > 0 ? attachments : undefined);
       setAttachments([]);
+
+      // Clear the contentEditable
+      if (contentEditableRef.current) {
+        contentEditableRef.current.textContent = "";
+      }
     },
-    [attachments, isPending, isStreaming, onStop, onSubmit, value]
+    [attachments, isPending, isStreaming, onChange, onStop, onSubmit, value]
   );
+
+  useEffect(() => {
+    if (contentEditableRef.current && value === "") {
+      if (contentEditableRef.current.textContent) {
+        queueMicrotask(() => {
+          if (contentEditableRef.current) {
+            contentEditableRef.current.textContent = "";
+          }
+        });
+      }
+    }
+  }, [value]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        handleSubmit(e as unknown as React.FormEvent);
+        handleSubmit(e);
       }
     },
     [handleSubmit]
   );
 
-  const handleAttachClick = useCallback(() => {
+  const handleImageClick = () => {
     fileInputRef.current?.click();
-  }, []);
+  };
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -100,127 +171,264 @@ function RichTextEditor({
     e.target.value = "";
   }, []);
 
+  // Open empty code artifact (cursor-like behavior)
+  const handleCursorClick = useCallback(() => {
+    openArtifact({
+      documentId: `code-${Date.now()}`,
+      title: "New Code",
+      kind: "code",
+      content: "// Start typing your code here...\n",
+      language: "typescript",
+      messageId: "",
+      status: "idle",
+    });
+  }, [openArtifact]);
+
+  // Open empty document artifact
+  const handleDocumentClick = useCallback(() => {
+    openArtifact({
+      documentId: `doc-${Date.now()}`,
+      title: "New Document",
+      kind: "text",
+      content: "",
+      messageId: "",
+      status: "idle",
+    });
+  }, [openArtifact]);
+
+  useEffect(() => {
+    const handleClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (contentEditableRef.current?.contains(target)) {
+        contentEditableRef.current.focus();
+      }
+    };
+    const wrapper = contentEditableRef.current?.closest('[role="presentation"]');
+    if (wrapper) {
+      wrapper.addEventListener("click", handleClick);
+      return () => wrapper.removeEventListener("click", handleClick);
+    }
+  }, []);
+
+  const pillButtonClass =
+    "inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent focus:outline-none";
+
   return (
-    <form onSubmit={handleSubmit} className="w-full" role="presentation">
-      <div
-        className={cn(
-          "w-full rounded-3xl border bg-background p-3 shadow-sm",
-          isFocused && "ring-2 ring-ring",
-          isDisabled && "opacity-60"
-        )}
-      >
-        <div className="flex items-start gap-3">
-          <div className="relative w-full">
-            {isEmpty && (
-              <div className="pointer-events-none absolute left-0 top-0 select-none text-muted-foreground">
-                {placeholder}
-              </div>
-            )}
-            <textarea
-              className={cn(
-                "min-h-[80px] w-full resize-none whitespace-pre-wrap break-words bg-transparent outline-none",
-                isDisabled && "pointer-events-none"
-              )}
-              value={value}
-              onChange={(e) => onChange(e.target.value === "\n" ? "" : e.target.value)}
-              onKeyDown={handleKeyDown}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              aria-label="Prompt"
-              disabled={isDisabled}
+    <div className="mx-auto flex w-full flex-col px-4 lg:max-w-[600px] xl:px-0">
+      <form className="flex w-full flex-col" onSubmit={handleSubmit}>
+        <div
+          className={cn(
+            "rounded-2xl border border-border bg-background transition-all shadow-sm",
+            isFocused && "ring-2 ring-ring",
+            isDisabled && "opacity-60"
+          )}
+        >
+          <div role="presentation" className="relative cursor-text overflow-hidden">
+            <input
+              ref={fileInputRef}
+              accept="image/*,.jpeg,.jpg,.png,.webp,.svg,.pdf,application/pdf"
+              multiple
+              type="file"
+              tabIndex={-1}
+              onChange={handleFileChange}
+              title="Attach files"
+              aria-label="Attach files"
+              className="absolute -m-px h-px w-px overflow-hidden whitespace-nowrap border-0 p-0 [clip:rect(0,0,0,0)]"
             />
-          </div>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className={cn(
-                  "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.08)] transition-all hover:bg-[hsl(240,6%,93%)] focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <div className="flex flex-col">
+              <div className="relative min-h-[44px] w-full px-4 py-3">
+                {isEmpty && (
+                  <span className="pointer-events-none absolute left-4 top-3 text-[15px] text-muted-foreground">
+                    {placeholder}
+                  </span>
                 )}
-                disabled={isDisabled}
-              >
-                <Sparkles className="h-4 w-4" />
-                {useMemo(() => {
-                  if (!selectedModel) return "Select model";
-                  return OPENROUTER_MODELS.find((m) => m.id === selectedModel)?.name ?? selectedModel;
-                }, [selectedModel])}
-                <ChevronDown className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {OPENROUTER_MODELS.map((model) => (
-                  <DropdownMenuItem
-                    key={model.id}
-                    onSelect={() => onSelectModel?.(model.id)}
-                    className={cn(selectedModel === model.id && "bg-accent")}
+                <div
+                  ref={contentEditableRef}
+                  contentEditable={!isDisabled}
+                  role="textbox"
+                  tabIndex={isDisabled ? -1 : 0}
+                  aria-label="Message input"
+                  title="Type your message here"
+                  translate="no"
+                  className="relative min-h-[20px] whitespace-pre-wrap break-words text-[15px] text-foreground outline-none"
+                  onInput={handleInput}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  suppressContentEditableWarning
+                />
+              </div>
+
+              {/* Attachments preview */}
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 px-4 pb-2">
+                  {attachments.map((file) => (
+                    <Badge key={`${file.name}-${file.size}-${file.lastModified}`} variant="secondary" className="gap-1">
+                      {file.name}
+                      <button
+                        type="button"
+                        onClick={() => setAttachments((prev) => prev.filter((f) => f !== file))}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between px-3 pb-2.5">
+                <div className="flex items-center gap-2">
+                  {/* Model Selector */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button type="button" className={pillButtonClass} disabled={isDisabled}>
+                        <SparkleIcon className="h-4 w-4" />
+                        <span className="max-w-[150px] truncate">
+                          {currentModel?.name || "Select model"}
+                        </span>
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56 max-h-80 overflow-y-auto">
+                      {modelsByProvider.map((group, idx) => (
+                        <div key={group.provider}>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                            {group.provider}
+                          </div>
+                          {group.models.map((model) => (
+                            <DropdownMenuItem
+                              key={model.id}
+                              onClick={() => onSelectModel?.(model.id)}
+                              className={cn(
+                                "pl-4",
+                                selectedModel === model.id && "bg-accent"
+                              )}
+                            >
+                              <span className="truncate">{model.name}</span>
+                            </DropdownMenuItem>
+                          ))}
+                          {idx < modelsByProvider.length - 1 && <DropdownMenuSeparator />}
+                        </div>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Options Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button type="button" className={pillButtonClass} disabled={isDisabled}>
+                        <Settings className="h-4 w-4" />
+                        <span>Options</span>
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-52">
+                      <DropdownMenuItem>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Plug className="mr-2 h-4 w-4" />
+                        MCP Connections
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setReasoningEnabled(!reasoningEnabled);
+                        }}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center">
+                          <Lightbulb className="mr-2 h-4 w-4" />
+                          Reasoning
+                        </div>
+                        <div
+                          className={cn(
+                            "h-4 w-8 rounded-full transition-colors",
+                            reasoningEnabled ? "bg-primary" : "bg-muted"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "h-4 w-4 rounded-full bg-background shadow transition-transform",
+                              reasoningEnabled && "translate-x-4"
+                            )}
+                          />
+                        </div>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {/* Cursor/Code Button - Opens Code Artifact */}
+                  <button
+                    type="button"
+                    onClick={handleCursorClick}
+                    title="New Code"
+                    aria-label="New Code"
+                    disabled={isDisabled}
+                    className="inline-flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-none disabled:opacity-50"
                   >
-                    {model.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {attachments.length > 0 && (
-              <Badge variant="secondary">{attachments.length} file(s)</Badge>
-            )}
-          </div>
+                    <MousePointer2 className="h-[18px] w-[18px]" />
+                  </button>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className={cn(
-                "inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.08)] transition-all hover:bg-[hsl(240,6%,93%)] focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              )}
-              disabled={isDisabled}
-              aria-label="Audio"
-            >
-              <AudioWaveform className="h-4 w-4" />
-            </button>
+                  {/* Document Button - Opens Document Artifact */}
+                  <button
+                    type="button"
+                    onClick={handleDocumentClick}
+                    title="New Document"
+                    aria-label="New Document"
+                    disabled={isDisabled}
+                    className="inline-flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-none disabled:opacity-50"
+                  >
+                    <FileText className="h-[18px] w-[18px]" />
+                  </button>
 
-            <button
-              type="button"
-              onClick={handleAttachClick}
-              className={cn(
-                "inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.08)] transition-all hover:bg-[hsl(240,6%,93%)] focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              )}
-              disabled={isDisabled}
-              aria-label="Attach"
-            >
-              <Paperclip className="h-4 w-4" />
-            </button>
+                  {/* Camera/Image Button */}
+                  <button
+                    type="button"
+                    onClick={handleImageClick}
+                    title="Attach Image"
+                    aria-label="Attach Image"
+                    disabled={isDisabled}
+                    className="inline-flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-none disabled:opacity-50"
+                  >
+                    <Camera className="h-[18px] w-[18px]" />
+                  </button>
 
-            <button
-              type="submit"
-              className={cn(
-                "inline-flex h-8 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
-                isStreaming && "bg-destructive hover:bg-destructive/90"
-              )}
-              disabled={isDisabled || (!isStreaming && isEmpty)}
-              aria-label={isStreaming ? "Stop" : "Build"}
-            >
-              {isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : isStreaming ? (
-                <span className="text-xs font-semibold">Stop</span>
-              ) : (
-                <ArrowRight className="h-4 w-4" />
-              )}
-              {!isStreaming ? "Build" : "Stop"}
-            </button>
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={isDisabled || (!isStreaming && isEmpty)}
+                    title={isStreaming ? "Stop" : "Submit"}
+                    aria-label={isStreaming ? "Stop" : "Submit"}
+                    className={cn(
+                      "ml-1 inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none disabled:cursor-not-allowed",
+                      isEmpty && !isStreaming
+                        ? "bg-muted text-muted-foreground"
+                        : isStreaming
+                          ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
+                    )}
+                  >
+                    {isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : isStreaming ? (
+                      <span className="h-3 w-3 rounded-sm bg-current" />
+                    ) : (
+                      <ArrowUp className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        className="hidden"
-        multiple
-        onChange={handleFileChange}
-        accept=".pdf,application/pdf,image/png,image/jpeg,image/gif,image/webp"
-        aria-label="Upload files"
-      />
-    </form>
+      </form>
+    </div>
   );
 }
 
@@ -229,7 +437,7 @@ export const PromptInput = ({
   onStop,
   isLoading = false,
   isStreaming = false,
-  placeholder = "Describe your idea",
+  placeholder = "Plan, @ for context, ...",
   className = "",
   selectedModel = "anthropic/claude-3.5-sonnet",
   onModelChange,
