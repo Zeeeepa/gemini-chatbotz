@@ -277,17 +277,17 @@ function RichTextEditor({
                 </div>
               )}
 
-              <div className="flex items-center justify-between px-3 pb-2.5">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2 px-3 pb-2.5">
+                <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
                   {/* Model Selector */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button type="button" className={pillButtonClass} disabled={isDisabled}>
-                        <SparkleIcon className="h-4 w-4" />
-                        <span className="max-w-[150px] truncate">
+                        <SparkleIcon className="h-4 w-4 shrink-0" />
+                        <span className="max-w-[80px] truncate sm:max-w-[150px]">
                           {currentModel?.name || "Select model"}
                         </span>
-                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-56 max-h-80 overflow-y-auto">
@@ -318,9 +318,9 @@ function RichTextEditor({
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button type="button" className={pillButtonClass} disabled={isDisabled}>
-                        <Settings className="h-4 w-4" />
-                        <span>Options</span>
-                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Settings className="h-4 w-4 shrink-0" />
+                        <span className="hidden sm:inline">Options</span>
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-52">
@@ -362,7 +362,7 @@ function RichTextEditor({
                   </DropdownMenu>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
                   {/* Cursor/Code Button - Opens Code Artifact */}
                   <button
                     type="button"
@@ -370,7 +370,7 @@ function RichTextEditor({
                     title="New Code"
                     aria-label="New Code"
                     disabled={isDisabled}
-                    className="inline-flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-none disabled:opacity-50"
+                    className="hidden h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-none disabled:opacity-50 sm:inline-flex"
                   >
                     <MousePointer2 className="h-[18px] w-[18px]" />
                   </button>
@@ -382,7 +382,7 @@ function RichTextEditor({
                     title="New Document"
                     aria-label="New Document"
                     disabled={isDisabled}
-                    className="inline-flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-none disabled:opacity-50"
+                    className="hidden h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus:outline-none disabled:opacity-50 sm:inline-flex"
                   >
                     <FileText className="h-[18px] w-[18px]" />
                   </button>
