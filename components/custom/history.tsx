@@ -3,7 +3,7 @@
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import cx from "classnames";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 type MinimalUser = { id?: string | null; email?: string | null };
 import { useState } from "react";
 import { toast } from "sonner";
@@ -44,6 +44,7 @@ import {
 
 export const History = ({ user }: { user?: MinimalUser | null }) => {
   const { id } = useParams();
+  const router = useRouter();
 
   const [isHistoryVisible, setIsHistoryVisible] = useState(false);
   
@@ -165,14 +166,14 @@ export const History = ({ user }: { user?: MinimalUser | null }) => {
                       className={cx(
                         "hover:bg-chocolate-200 dark:hover:bg-chocolate-700 justify-between p-0 text-sm font-normal flex flex-row items-center gap-2 pr-2 w-full transition-none",
                       )}
-                      asChild
+                      onClick={() => {
+                        setIsHistoryVisible(false);
+                        router.push(`/chat/${thread.threadId}`);
+                      }}
                     >
-                      <Link
-                        href={`/chat/${thread.threadId}`}
-                        className="text-ellipsis overflow-hidden text-left py-2 pl-2 rounded-lg outline-chocolate-900"
-                      >
+                      <span className="text-ellipsis overflow-hidden text-left py-2 pl-2 rounded-lg">
                         {thread.title || "New Chat"}
-                      </Link>
+                      </span>
                     </Button>
 
                     <DropdownMenu modal={true}>

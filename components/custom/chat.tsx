@@ -5,7 +5,11 @@ import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUIMessages } from "@convex-dev/agent/react";
 import { Message as PreviewMessage } from "@/components/custom/message";
-import { useScrollToBottom } from "@/components/custom/use-scroll-to-bottom";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
 import { PromptInput } from "./prompt-input";
 import { Overview } from "./overview";
 import { DEFAULT_MODEL, type OpenRouterModelId } from "@/lib/ai/openrouter";
@@ -82,6 +86,12 @@ export function Chat({
   const [isUploading, setIsUploading] = useState(false);
   const [selectedModel, setSelectedModel] = useState<OpenRouterModelId>(DEFAULT_MODEL);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Reset state when navigating to a different chat
+  useEffect(() => {
+    setThreadId(null);
+    setThreadChecked(false);
+  }, [id]);
 
   // Once the thread check completes, set the threadId if the thread exists
   useEffect(() => {
@@ -167,8 +177,7 @@ export function Chat({
     { initialNumItems: 50, stream: true }
   );
 
-  const [messagesContainerRef, messagesEndRef] = useScrollToBottom<HTMLDivElement>();
-
+  
   // Check if the last message is still streaming (message.status === "streaming")
   const isStreamingResponse = useMemo(() => {
     if (!messages || messages.length === 0) return false;
@@ -294,37 +303,37 @@ export function Chat({
   // Messages panel content - extracted for reuse in both mobile and desktop layouts
   const MessagesContent = (
     <div className="flex flex-col justify-between items-center gap-4 w-full h-full min-w-0">
-      <div
-        ref={messagesContainerRef}
-        className="flex flex-col gap-4 h-full w-full items-center overflow-y-scroll px-4 min-w-0"
-      >
-        {messages.length === 0 && <Overview />}
+      <Conversation className="flex-1 w-full">
+        <ConversationContent className="flex flex-col gap-4 w-full items-center px-4">
+          {messages.length === 0 && <Overview />}
 
-        {messages.map((message, index) => {
-          const isLastMessage = index === messages.length - 1;
-          const messageIsStreaming = isLastMessage && message.role === "assistant" && isStreamingResponse;
-          
-          return (
-            <PreviewMessage
-              key={message.id}
-              chatId={threadId || id}
-              role={message.role}
-              content={message.text || ""}
-              toolInvocations={getToolInvocations(message.parts, message.id)}
-              attachments={[]}
-              reasoning={getReasoningFromParts(message.parts)}
-              isStreaming={messageIsStreaming}
-            />
-          );
-        })}
+          {messages.map((message, index) => {
+            const isLastMessage = index === messages.length - 1;
+            const messageIsStreaming = isLastMessage && message.role === "assistant" && isStreamingResponse;
+            
+            return (
+              <PreviewMessage
+                key={message.id}
+                chatId={threadId || id}
+                role={message.role}
+                content={message.text || ""}
+                toolInvocations={getToolInvocations(message.parts, message.id)}
+                attachments={[]}
+                reasoning={getReasoningFromParts(message.parts)}
+                isStreaming={messageIsStreaming}
+              />
+            );
+          })}
 
-        {/* Show thinking indicator when waiting for first response */}
-        {isLoading && !isStreamingResponse && (
-          <ThinkingMessage />
-        )}
+          {/* Show thinking indicator when waiting for first response */}
+          {isLoading && !isStreamingResponse && (
+            <ThinkingMessage />
+          )}
 
-        <div ref={messagesEndRef} className="shrink-0 min-w-[24px] min-h-[24px]" />
-      </div>
+          <div className="shrink-0 min-w-[24px] min-h-[24px]" />
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
 
       <div className={cn(
         "w-full px-4 pb-4",
