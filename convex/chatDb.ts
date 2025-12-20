@@ -83,11 +83,12 @@ export const listMessages = query({
         const isValidConvexId = /^[a-z0-9]+$/.test(args.threadId);
         if (!isValidConvexId) {
             // Return empty result for invalid thread IDs (legacy UUIDs from localStorage)
+            // streams must be undefined or have proper structure with kind+messages/deltas
             return {
                 page: [],
                 isDone: true,
                 continueCursor: null,
-                streams: {},
+                streams: undefined,
             };
         }
 
@@ -103,7 +104,7 @@ export const listMessages = query({
                     page: [],
                     isDone: true,
                     continueCursor: null,
-                    streams: {},
+                    streams: undefined,
                 };
             }
             throw error;
