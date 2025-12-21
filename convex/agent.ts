@@ -1552,7 +1552,7 @@ You are running on Gemini 3 Flash.
     // Gemini Flash: limit to 5 steps (increased since thinking disabled)
     // Other Gemini: limit to 7 steps  
     // Others: 10 steps
-    maxSteps: isGeminiFlash ? 5 : (isGeminiModel ? 7 : 10),
+    maxSteps: isGeminiFlash ? 64 : (isGeminiModel ? 64 : 10),
   });
 }
 
