@@ -31,6 +31,7 @@ export type OpenRouterModelId =
   | "moonshotai/kimi-k2-thinking"
   | "prime-intellect/intellect-3"
   | "minimax/minimax-m2"
+  | "minimax/minimax-m2.1"
   | "x-ai/grok-code-fast-1"
   | "z-ai/glm-4.6"
   | "z-ai/glm-4.6v"
@@ -265,6 +266,16 @@ export const OPENROUTER_MODELS: ModelDefinition[] = [
     maxOutput: 4096,
     pricing: { prompt: 0.0, completion: 0.0 },
     capabilities: { vision: true, functionCalling: true, streaming: true },
+  },
+  {
+    id: "minimax/minimax-m2.1",
+    name: "MiniMax M2.1",
+    provider: "MiniMax",
+    description: "Lightweight 10B model optimized for coding, agentic workflows, and modern app development with leading multilingual coding performance",
+    contextLength: 204800,
+    maxOutput: 8192,
+    pricing: { prompt: 0.0003, completion: 0.0012 },
+    capabilities: { functionCalling: true, streaming: true },
   },
   {
     id: "x-ai/grok-code-fast-1",
