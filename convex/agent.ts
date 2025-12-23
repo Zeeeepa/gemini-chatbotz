@@ -1529,6 +1529,7 @@ export function createAgentWithModel(modelId: OpenRouterModelId) {
   const isGemini3 = modelId.includes("gemini-3");
   const isGeminiFlash = modelId === "google/gemini-3-flash-preview";
   const isGeminiModel = modelId.startsWith("google/gemini");
+  const isMinimax = modelId.startsWith("minimax/");
 
   // For Gemini 3 models, explicitly enable thinking.
   const languageModel = isGemini3
@@ -1539,21 +1540,39 @@ export function createAgentWithModel(modelId: OpenRouterModelId) {
     })
     : openrouter(modelId);
 
+  // MiniMax models have limited tool support - use only basic document tools
+  const minimaxTools = {
+    createDocument: baseTools.createDocument,
+    updateDocument: baseTools.updateDocument,
+    getWeather: baseTools.getWeather,
+  };
+
+  // Select appropriate tools based on model
+  const tools = isMinimax ? minimaxTools : baseTools;
+
+  // Custom instructions for MiniMax models
+  const minimaxInstructions = `You are a helpful AI assistant powered by MiniMax M2.1.
+You excel at coding, analysis, and conversation. Keep responses focused and helpful.
+Today's date is ${new Date().toLocaleDateString()}.
+
+You can create documents for code or text content using the createDocument tool.
+For weather queries, use the getWeather tool with latitude/longitude coordinates.`;
+
   return new Agent(components.agent, {
     name: `Agent (${modelId})`,
     languageModel,
-    instructions: isGeminiFlash
-      ? baseInstructions + `\n\n<model_constraints>
+    instructions: isMinimax
+      ? minimaxInstructions
+      : isGeminiFlash
+        ? baseInstructions + `\n\n<model_constraints>
 You are running on Gemini 3 Flash.
 - Complete tasks efficiently with minimal tool calls
 - If a tool call fails, explain what happened and suggest alternatives
 </model_constraints>`
-      : baseInstructions,
-    tools: baseTools,
-    // Gemini Flash: limit to 5 steps (increased since thinking disabled)
-    // Other Gemini: limit to 7 steps  
-    // Others: 10 steps
-    maxSteps: isGeminiFlash ? 64 : (isGeminiModel ? 64 : 10),
+        : baseInstructions,
+    tools,
+    // MiniMax: 5 steps max, Gemini Flash: 64, Other Gemini: 64, Others: 10
+    maxSteps: isMinimax ? 5 : (isGeminiFlash ? 64 : (isGeminiModel ? 64 : 10)),
   });
 }
 
