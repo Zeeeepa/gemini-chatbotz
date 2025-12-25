@@ -1595,7 +1595,8 @@ You are running on Gemini 3 Flash.
 
 export const flightAgent: Agent = new Agent(components.agent, {
   name: "Flight Booking Agent",
-  // Gemini 2.5 Flash - stable with AI SDK, fast agentic workflows
+  // Gemini 2.5 Flash - stable. Gemini 3 requires SDK update for reasoning_details handling
+  // See: https://github.com/openrouter/ai-sdk-provider/issues (thought_signature preservation)
   languageModel: openrouter("google/gemini-2.5-flash"),
   instructions: baseInstructions,
   tools: baseTools,

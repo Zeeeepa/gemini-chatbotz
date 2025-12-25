@@ -1,10 +1,24 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { wrapWithGemini3Support, isGemini3Model } from "./gemini3-middleware";
 
 console.log('Initializing OpenRouter with API key present:', !!process.env.OPENROUTER_API_KEY);
 
-export const openrouter = createOpenRouter({
+const baseOpenRouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
 });
+
+// Wrapper that applies Gemini 3 middleware for thought signature preservation
+export const openrouter = (modelId: string, options?: Parameters<typeof baseOpenRouter>[1]) => {
+  const model = baseOpenRouter(modelId, options);
+  
+  // Apply Gemini 3 middleware for thought signature handling
+  if (isGemini3Model(modelId)) {
+    console.log(`[OpenRouter] Applying Gemini 3 middleware for ${modelId}`);
+    return wrapWithGemini3Support(model);
+  }
+  
+  return model;
+};
 
 console.log('OpenRouter client created successfully');
 
@@ -110,7 +124,7 @@ export const OPENROUTER_MODELS: ModelDefinition[] = [
     capabilities: { vision: true, functionCalling: true, streaming: true },
   },
   {
-    id: "x-ai/grok-4.1-fast",
+    id: "x-ai/grok-4.1-fast:free",
     name: "Grok 4.1 Fast",
     provider: "xAI",
     description: "xAI's latest multimodal model with SOTA cost-efficiency and 2M context",
