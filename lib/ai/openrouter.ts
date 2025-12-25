@@ -17,8 +17,10 @@ export type OpenRouterModelId =
   | "anthropic/claude-3-opus"
   | "anthropic/claude-3-haiku"
   | "anthropic/claude-opus-4.5"
+  | "google/gemini-2.5-flash"
+  | "google/gemini-2.5-pro"
+  | "google/gemini-2.0-flash-001"
   | "google/gemini-3-flash-preview"
-  | "google/gemini-pro-1.5"
   | "google/gemini-3-pro-preview"
   | "meta-llama/llama-3.1-70b-instruct"
   | "meta-llama/llama-3.1-405b-instruct"
@@ -27,7 +29,7 @@ export type OpenRouterModelId =
   | "deepseek/deepseek-chat"
   | "deepseek/deepseek-v3.2"
   | "deepseek/deepseek-v3.2-speciale"
-  | "x-ai/grok-4.1-fast"
+  | "x-ai/grok-4.1-fast:free"
   | "moonshotai/kimi-k2-thinking"
   | "prime-intellect/intellect-3"
   | "minimax/minimax-m2"
@@ -168,23 +170,33 @@ export const OPENROUTER_MODELS: ModelDefinition[] = [
     capabilities: { vision: true, functionCalling: true, streaming: true },
   },
   {
-    id: "google/gemini-3-flash-preview",
-    name: "Gemini 3 Flash",
+    id: "google/gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
     provider: "Google",
-    description: "High speed thinking model for agentic workflows, multi-turn chat, and coding assistance",
+    description: "Fast, efficient Gemini model with strong reasoning",
     contextLength: 1048576,
     maxOutput: 8192,
-    pricing: { prompt: 0.0005, completion: 0.003 },
+    pricing: { prompt: 0.000075, completion: 0.0003 },
     capabilities: { vision: true, functionCalling: true, streaming: true },
   },
   {
-    id: "google/gemini-pro-1.5",
-    name: "Gemini Pro 1.5",
+    id: "google/gemini-2.5-pro",
+    name: "Gemini 2.5 Pro",
     provider: "Google",
-    description: "Advanced Gemini with long context",
-    contextLength: 2000000,
-    maxOutput: 8192,
+    description: "Advanced reasoning with thinking capabilities",
+    contextLength: 1048576,
+    maxOutput: 65536,
     pricing: { prompt: 0.00125, completion: 0.005 },
+    capabilities: { vision: true, functionCalling: true, streaming: true },
+  },
+  {
+    id: "google/gemini-3-flash-preview",
+    name: "Gemini 3 Flash (Preview)",
+    provider: "Google",
+    description: "High speed thinking model for agentic workflows (SDK compatibility pending)",
+    contextLength: 1048576,
+    maxOutput: 8192,
+    pricing: { prompt: 0.0005, completion: 0.003 },
     capabilities: { vision: true, functionCalling: true, streaming: true },
   },
   {

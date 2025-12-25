@@ -1531,7 +1531,7 @@ export function createAgentWithModel(modelId: OpenRouterModelId) {
   const isGeminiFlash = modelId === "google/gemini-3-flash-preview";
   const isMinimax = modelId.startsWith("minimax/");
 
-  // OpenRouter doesn't support Gemini thinking param - use standard model.
+  // Gemini 3 models have built-in thinking - no extra config needed
   const languageModel = openrouter(modelId);
 
   // MiniMax models - include coding and search tools, exclude complex multi-step flight tools
@@ -1595,7 +1595,7 @@ You are running on Gemini 3 Flash.
 
 export const flightAgent: Agent = new Agent(components.agent, {
   name: "Flight Booking Agent",
-  // Use stable Gemini 2.5 Flash for reliable performance.
+  // Gemini 2.5 Flash - stable with AI SDK, fast agentic workflows
   languageModel: openrouter("google/gemini-2.5-flash"),
   instructions: baseInstructions,
   tools: baseTools,
