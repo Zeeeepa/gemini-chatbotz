@@ -10,6 +10,7 @@ import { Stories, StoriesContent, Story, StoryImage, StoryOverlay, StoryTitle } 
 import { cn } from "@/lib/utils";
 import { ArtifactPreviewButton } from "./artifact-panel";
 import { useArtifact } from "@/hooks/use-artifact";
+import { getLanguageFromTitle } from "@/lib/artifacts/types";
 import {
   WebPreview,
   WebPreviewBody,
@@ -117,6 +118,22 @@ export function ToolView({ toolName, args, result, status }: ToolViewProps) {
       return <HyperbrowserScrapeView toolName={toolName} args={args} result={result} isLoading={isLoading} />;
     case "createBrowserSession":
       return <BrowserSessionView args={args} result={result} isLoading={isLoading} />;
+    // Browserbase Tools (BrowseGPT parity)
+    case "browserbaseCreateSession":
+    case "createSession":
+      return <BrowserbaseSessionView args={args} result={result} isLoading={isLoading} />;
+    case "browserbaseNavigate":
+    case "navigate":
+      return <BrowserbaseNavigateView args={args} result={result} isLoading={isLoading} />;
+    case "browserbaseSearch":
+    case "googleSearch":
+      return <BrowserbaseSearchView args={args} result={result} isLoading={isLoading} />;
+    case "browserbaseGetContent":
+    case "getPageContent":
+      return <BrowserbaseContentView args={args} result={result} isLoading={isLoading} />;
+    case "browserbaseAskConfirmation":
+    case "askForConfirmation":
+      return <BrowserbaseConfirmationView args={args} result={result} isLoading={isLoading} />;
     // Deepcrawl Tools
     case "deepcrawlGetMarkdown":
       return <DeepcrawlMarkdownView args={args} result={result} isLoading={isLoading} />;
@@ -493,10 +510,18 @@ function ImageGenerationView({ args, result, isLoading }: { args: Record<string,
       </div>
       {isLoading && <LoadingBar />}
       
-      {/* Display images */}
+      {/* Display single image */}
       {allImages.length === 1 && (
         <div className="rounded-lg overflow-hidden border border-chocolate-200 dark:border-chocolate-700">
-          <img src={allImages[0]} alt={args.prompt as string} className="w-full h-auto" />
+          <img 
+            src={allImages[0]} 
+            alt={args.prompt as string} 
+            className="w-full h-auto"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.parentElement?.classList.add('hidden');
+            }}
+          />
         </div>
       )}
 
@@ -506,7 +531,10 @@ function ImageGenerationView({ args, result, isLoading }: { args: Record<string,
           <StoriesContent>
             {allImages.map((url, idx) => (
               <Story className="aspect-[3/4] w-[200px]" key={idx}>
-                <StoryImage alt={`Generated ${idx + 1}`} src={url} />
+                <StoryImage 
+                  alt={`Generated ${idx + 1}`} 
+                  src={url}
+                />
                 <StoryOverlay side="bottom" />
                 <StoryTitle className="truncate font-medium text-sm">
                   Image {idx + 1}
@@ -584,25 +612,31 @@ function DocumentView({ args, result, isLoading }: { args: Record<string, unknow
   const title = (args.title as string) || "Untitled Document";
   const kind = (args.kind as string) || "text";
   const content = (args.content as string) || "";
-  const resultData = result as { id?: string; content?: string } | undefined;
+  // Result includes: id, title, kind, content, message
+  const resultData = result as { id?: string; title?: string; kind?: string; content?: string; message?: string } | undefined;
   const { openArtifact } = useArtifact();
   const hasAutoOpened = useRef(false);
+  
+  // Get language from title (e.g., "script.py" -> "python")
+  const language = kind === "code" ? getLanguageFromTitle(title) : undefined;
+  // Use content from result first, then fall back to args
+  const finalContent = resultData?.content || content;
 
   // Auto-open artifact when document is created/updated
   useEffect(() => {
-    if (resultData?.id && !hasAutoOpened.current) {
+    if (resultData?.id && finalContent && !hasAutoOpened.current) {
       hasAutoOpened.current = true;
       openArtifact({
         documentId: resultData.id,
         title,
         kind: kind as "code" | "text" | "sheet",
-        content: resultData.content || content,
-        language: kind === "code" ? (args.description as string)?.match(/\.(tsx?|jsx?|py|java|go|rust|cpp|c|rb|php|swift|kt)$/i)?.[1] : undefined,
+        content: finalContent,
+        language,
         messageId: "",
         status: "idle",
       });
     }
-  }, [resultData?.id, title, kind, content, args.description, openArtifact, resultData?.content]);
+  }, [resultData?.id, title, kind, finalContent, language, openArtifact]);
 
   // Choose icon based on document kind
   const KindIcon = kind === "code" ? Code : kind === "sheet" ? Table : FileText;
@@ -629,8 +663,8 @@ function DocumentView({ args, result, isLoading }: { args: Record<string, unknow
               id: resultData.id,
               title,
               kind: kind as "code" | "text" | "sheet",
-              content: resultData.content || content,
-              language: kind === "code" ? (args.description as string)?.match(/\.(tsx?|jsx?|py|java|go|rust|cpp|c|rb|php|swift|kt)$/i)?.[1] : undefined,
+              content: finalContent,
+              language,
             }}
           />
         </div>
@@ -1253,18 +1287,383 @@ function DeepcrawlLinksView({ toolName, args, result, isLoading }: { toolName: s
   );
 }
 
+// =============================================================================
+// Browserbase Tool Views (BrowseGPT Feature Parity)
+// =============================================================================
+
+function BrowserbaseDebuggerEmbed({
+  debuggerUrl,
+  title = "Browser Session",
+  sessionId
+}: {
+  debuggerUrl: string;
+  title?: string;
+  sessionId?: string;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Append navBar=false if not present
+  const embedUrl = debuggerUrl.includes("navBar=")
+    ? debuggerUrl
+    : `${debuggerUrl}${debuggerUrl.includes("?") ? "&" : "?"}navBar=false`;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-chocolate-500 font-medium flex items-center gap-1">
+          <Monitor className="w-3 h-3" />
+          Live Browser Session
+          {sessionId && (
+            <code className="ml-2 bg-chocolate-100 dark:bg-chocolate-800 px-1.5 py-0.5 rounded text-[10px]">
+              {sessionId.slice(0, 8)}...
+            </code>
+          )}
+        </p>
+        <div className="flex gap-1">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1 hover:bg-chocolate-200 dark:hover:bg-chocolate-700 rounded text-chocolate-500"
+            title={isExpanded ? "Minimize" : "Expand"}
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+          <a
+            href={debuggerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1 hover:bg-chocolate-200 dark:hover:bg-chocolate-700 rounded text-chocolate-500"
+            title="Open in new tab"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
+      </div>
+
+      <div className={cn(
+        "rounded-lg overflow-hidden border border-chocolate-200 dark:border-chocolate-700 transition-all duration-300",
+        isExpanded ? "h-[520px]" : "h-[320px]"
+      )}>
+        <iframe
+          src={embedUrl}
+          className="w-full h-full"
+          title={title}
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+          allow="clipboard-read; clipboard-write"
+        />
+      </div>
+    </div>
+  );
+}
+
+function BrowserbaseSessionView({ args, result, isLoading }: { args: Record<string, unknown>; result?: Record<string, unknown>; isLoading: boolean }) {
+  const sessionId = (result as any)?.sessionId;
+  const debugUrl = (result as any)?.debugUrl || (result as any)?.debuggerFullscreenUrl;
+  const toolName = (result as any)?.toolName || "Creating session";
+
+  return (
+    <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-chocolate-600 dark:text-chocolate-400">
+        <Monitor className="w-5 h-5" />
+        <span className="font-medium">Browserbase Session</span>
+        {sessionId && (
+          <Status status="online" className="text-xs px-2 py-0.5 ml-auto">
+            <StatusIndicator />
+            <StatusLabel>Active</StatusLabel>
+          </Status>
+        )}
+      </div>
+
+      {isLoading && <LoadingIndicator label="Creating browser session..." />}
+
+      {sessionId && (
+        <div className="text-sm space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-chocolate-500">Session ID:</span>
+            <code className="bg-chocolate-100 dark:bg-chocolate-800 px-2 py-0.5 rounded text-xs font-mono">
+              {sessionId}
+            </code>
+          </div>
+          {toolName && (
+            <div className="text-xs text-chocolate-400">
+              {toolName}
+            </div>
+          )}
+        </div>
+      )}
+
+      {debugUrl && (
+        <BrowserbaseDebuggerEmbed
+          debuggerUrl={debugUrl}
+          title="Browserbase Session"
+          sessionId={sessionId}
+        />
+      )}
+    </div>
+  );
+}
+
+function BrowserbaseNavigateView({ args, result, isLoading }: { args: Record<string, unknown>; result?: Record<string, unknown>; isLoading: boolean }) {
+  const url = (args.url as string) || (result as any)?.url;
+  const sessionId = (result as any)?.sessionId;
+  const debugUrl = (args as any)?.debuggerFullscreenUrl || (result as any)?.debuggerFullscreenUrl || (result as any)?.debugUrl;
+  const status = (result as any)?.status;
+
+  return (
+    <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-chocolate-600 dark:text-chocolate-400">
+        <Globe className="w-5 h-5" />
+        <span className="font-medium">Navigate to URL</span>
+        {status && (
+          <Status status={status === "success" ? "online" : "degraded"} className="text-xs px-2 py-0.5 ml-auto">
+            <StatusIndicator />
+            <StatusLabel>{status}</StatusLabel>
+          </Status>
+        )}
+      </div>
+
+      {url && (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-chocolate-600 dark:text-chocolate-400 hover:underline flex items-center gap-1"
+        >
+          <ExternalLink className="w-3 h-3" />
+          {url}
+        </a>
+      )}
+
+      {isLoading && <LoadingIndicator label="Navigating..." />}
+
+      {debugUrl && (
+        <BrowserbaseDebuggerEmbed
+          debuggerUrl={debugUrl}
+          title={`Navigating to ${url || 'page'}`}
+          sessionId={sessionId}
+        />
+      )}
+    </div>
+  );
+}
+
+function BrowserbaseSearchView({ args, result, isLoading }: { args: Record<string, unknown>; result?: Record<string, unknown>; isLoading: boolean }) {
+  const query = (args.query as string) || (args.searchQuery as string);
+  const sessionId = (result as any)?.sessionId;
+  const debugUrl = (args as any)?.debuggerFullscreenUrl || (result as any)?.debuggerFullscreenUrl || (result as any)?.debugUrl;
+  const content = (result as any)?.content;
+  const dataCollected = (result as any)?.dataCollected;
+  const { openArtifact } = useArtifact();
+  const hasAutoOpened = useRef(false);
+
+  // Auto-open artifact when search results are collected
+  useEffect(() => {
+    if (content && !hasAutoOpened.current) {
+      hasAutoOpened.current = true;
+      openArtifact({
+        documentId: `search-${Date.now()}`,
+        title: `Search: ${query?.slice(0, 40) || "Google Search"}`,
+        kind: "text",
+        content: content,
+        messageId: "",
+        status: "idle",
+      });
+    }
+  }, [content, query, openArtifact]);
+
+  return (
+    <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-chocolate-600 dark:text-chocolate-400">
+        <Search className="w-5 h-5" />
+        <span className="font-medium">Google Search</span>
+        {dataCollected && (
+          <Status status="online" className="text-xs px-2 py-0.5 ml-auto">
+            <StatusIndicator />
+            <StatusLabel>Data Collected</StatusLabel>
+          </Status>
+        )}
+      </div>
+
+      {query && (
+        <div className="text-sm text-chocolate-700 dark:text-chocolate-300 bg-chocolate-100 dark:bg-chocolate-800 p-3 rounded-lg">
+          <span className="text-chocolate-500 text-xs uppercase block mb-1">Query</span>
+          {query}
+        </div>
+      )}
+
+      {isLoading && <LoadingIndicator label="Searching Google..." />}
+
+      {debugUrl && (
+        <BrowserbaseDebuggerEmbed
+          debuggerUrl={debugUrl}
+          title={`Searching: ${query || 'Google'}`}
+          sessionId={sessionId}
+        />
+      )}
+
+      {content && (
+        <Snippet className="bg-white/70 dark:bg-chocolate-950/60 border-chocolate-200 dark:border-chocolate-800" defaultValue="content">
+          <SnippetHeader className="bg-chocolate-100 dark:bg-chocolate-800">
+            <div className="text-xs font-medium text-chocolate-600 dark:text-chocolate-200">Search Results</div>
+            <SnippetCopyButton className="text-chocolate-500 hover:text-chocolate-800" value={content} />
+          </SnippetHeader>
+          <SnippetTabsList>
+            <SnippetTabsTrigger value="content">Content</SnippetTabsTrigger>
+            <SnippetTabsTrigger value="raw">Raw</SnippetTabsTrigger>
+          </SnippetTabsList>
+          <SnippetTabsContent className="bg-chocolate-50 dark:bg-chocolate-900 max-h-48 overflow-auto" value="content">
+            <div className="prose prose-sm dark:prose-invert max-w-none text-chocolate-700 dark:text-chocolate-200">
+              {content.slice(0, 2000)}{content.length > 2000 && "..."}
+            </div>
+          </SnippetTabsContent>
+          <SnippetTabsContent className="bg-chocolate-50 dark:bg-chocolate-900 max-h-48 overflow-auto" value="raw">
+            <pre className="text-xs whitespace-pre-wrap text-chocolate-700 dark:text-chocolate-200">{content}</pre>
+          </SnippetTabsContent>
+        </Snippet>
+      )}
+    </div>
+  );
+}
+
+function BrowserbaseContentView({ args, result, isLoading }: { args: Record<string, unknown>; result?: Record<string, unknown>; isLoading: boolean }) {
+  const url = (args.url as string);
+  const sessionId = (result as any)?.sessionId;
+  const debugUrl = (args as any)?.debuggerFullscreenUrl || (result as any)?.debuggerFullscreenUrl;
+  const content = (result as any)?.content;
+  const dataCollected = (result as any)?.dataCollected;
+  const { openArtifact } = useArtifact();
+  const hasAutoOpened = useRef(false);
+
+  // Auto-open artifact when page content is extracted
+  useEffect(() => {
+    if (content && !hasAutoOpened.current) {
+      hasAutoOpened.current = true;
+      openArtifact({
+        documentId: `content-${Date.now()}`,
+        title: `Content from ${url ? new URL(url).hostname : 'page'}`,
+        kind: "text",
+        content: content,
+        messageId: "",
+        status: "idle",
+      });
+    }
+  }, [content, url, openArtifact]);
+
+  return (
+    <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-chocolate-600 dark:text-chocolate-400">
+        <FileText className="w-5 h-5" />
+        <span className="font-medium">Page Content</span>
+        {dataCollected && (
+          <Status status="online" className="text-xs px-2 py-0.5 ml-auto">
+            <StatusIndicator />
+            <StatusLabel>Extracted</StatusLabel>
+          </Status>
+        )}
+      </div>
+
+      {url && (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-chocolate-600 dark:text-chocolate-400 hover:underline flex items-center gap-1"
+        >
+          <Globe className="w-3 h-3" />
+          {url}
+        </a>
+      )}
+
+      {isLoading && <LoadingIndicator label="Extracting page content..." />}
+
+      {debugUrl && (
+        <BrowserbaseDebuggerEmbed
+          debuggerUrl={debugUrl}
+          title="Extracting Content"
+          sessionId={sessionId}
+        />
+      )}
+
+      {content && (
+        <Snippet className="bg-white/70 dark:bg-chocolate-950/60 border-chocolate-200 dark:border-chocolate-800" defaultValue="content">
+          <SnippetHeader className="bg-chocolate-100 dark:bg-chocolate-800">
+            <div className="text-xs font-medium text-chocolate-600 dark:text-chocolate-200">Extracted Content</div>
+            <SnippetCopyButton className="text-chocolate-500 hover:text-chocolate-800" value={content} />
+          </SnippetHeader>
+          <SnippetTabsList>
+            <SnippetTabsTrigger value="content">Preview</SnippetTabsTrigger>
+            <SnippetTabsTrigger value="raw">Raw</SnippetTabsTrigger>
+          </SnippetTabsList>
+          <SnippetTabsContent className="bg-chocolate-50 dark:bg-chocolate-900 max-h-64 overflow-auto" value="content">
+            <div className="prose prose-sm dark:prose-invert max-w-none text-chocolate-700 dark:text-chocolate-200">
+              {content.slice(0, 3000)}{content.length > 3000 && "..."}
+            </div>
+          </SnippetTabsContent>
+          <SnippetTabsContent className="bg-chocolate-50 dark:bg-chocolate-900 max-h-64 overflow-auto" value="raw">
+            <pre className="text-xs whitespace-pre-wrap text-chocolate-700 dark:text-chocolate-200">{content}</pre>
+          </SnippetTabsContent>
+        </Snippet>
+      )}
+    </div>
+  );
+}
+
+function BrowserbaseConfirmationView({ args, result, isLoading }: { args: Record<string, unknown>; result?: Record<string, unknown>; isLoading: boolean }) {
+  const message = (args.message as string) || "Awaiting confirmation...";
+  const confirmed = (result as any)?.confirmed;
+
+  return (
+    <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-chocolate-600 dark:text-chocolate-400">
+        <ShieldCheck className="w-5 h-5" />
+        <span className="font-medium">Confirmation Required</span>
+      </div>
+
+      <p className="text-sm text-chocolate-700 dark:text-chocolate-300">{message}</p>
+
+      {isLoading && <LoadingIndicator label="Awaiting confirmation..." />}
+
+      {confirmed !== undefined && (
+        <div className={`flex items-center gap-2 text-sm ${confirmed ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+          {confirmed ? (
+            <><CheckCircle className="w-4 h-4" /> Confirmed</>
+          ) : (
+            <>Action declined</>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GenericToolView({ toolName, args, result, isLoading }: { toolName: string; args: Record<string, unknown>; result?: Record<string, unknown>; isLoading: boolean }) {
   // Check if result contains a liveUrl for any generic tool
   const liveUrl = (result as any)?.liveUrl || (result as any)?.live_url;
+  // Also check for Browserbase debugger URL in args or result (BrowseGPT pattern)
+  const debuggerUrl = (args as any)?.debuggerFullscreenUrl || (result as any)?.debuggerFullscreenUrl || (result as any)?.debugUrl;
+  const sessionId = (result as any)?.sessionId;
 
   return (
     <div className="rounded-xl border border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 p-4 space-y-3">
       <div className="flex items-center gap-2 text-chocolate-600 dark:text-chocolate-400">
         <span className="font-medium">{toolName}</span>
+        {sessionId && (
+          <code className="ml-auto text-xs bg-chocolate-100 dark:bg-chocolate-800 px-2 py-0.5 rounded">
+            Session: {sessionId.slice(0, 8)}...
+          </code>
+        )}
       </div>
-      <pre className="text-xs bg-chocolate-100 dark:bg-chocolate-800 p-2 rounded overflow-auto">{JSON.stringify(args, null, 2)}</pre>
+      <pre className="text-xs bg-chocolate-100 dark:bg-chocolate-800 p-2 rounded overflow-auto max-h-32">{JSON.stringify(args, null, 2)}</pre>
       {isLoading && <LoadingBar />}
-      {liveUrl && <LivePreviewEmbed liveUrl={liveUrl} />}
+      {/* Browserbase debugger iframe embedding (BrowseGPT pattern) */}
+      {debuggerUrl && (
+        <BrowserbaseDebuggerEmbed
+          debuggerUrl={debuggerUrl}
+          title={toolName}
+          sessionId={sessionId}
+        />
+      )}
+      {/* Hyperbrowser/other live preview */}
+      {liveUrl && !debuggerUrl && <LivePreviewEmbed liveUrl={liveUrl} />}
       {result && <pre className="text-xs bg-chocolate-200 dark:bg-chocolate-700 p-2 rounded overflow-auto max-h-60">{JSON.stringify(result, null, 2)}</pre>}
     </div>
   );

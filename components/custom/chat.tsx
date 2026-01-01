@@ -35,6 +35,13 @@ import {
 } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
 
+// Helper function to validate Convex thread IDs - MUST be outside component for stability
+// Convex thread IDs are lowercase alphanumeric (e.g. "m57857vxf5zexbj8h5a41448bx7xp9qw")
+// UUIDs include dashes and should not be treated as agent thread IDs.
+function isValidConvexThreadId(threadId: string): boolean {
+  return /^[a-z0-9]+$/.test(threadId) && !threadId.includes("-");
+}
+
 // File attachment type for uploaded files
 type FileAttachment = {
   storageId?: Id<"_storage">;
@@ -70,12 +77,6 @@ export function Chat({
   initialMessages?: Array<any>;
   userId?: string;
 }) {
-  const isValidConvexThreadId = useCallback((threadId: string) => {
-    // Convex thread IDs are lowercase alphanumeric (e.g. "m57857vxf5zexbj8h5a41448bx7xp9qw")
-    // UUIDs include dashes and should not be treated as agent thread IDs.
-    return /^[a-z0-9]+$/.test(threadId) && !threadId.includes("-");
-  }, []);
-
   const { data: session, isPending: isSessionLoading } = authClient.useSession();
   const effectiveUserId = useMemo(
     () => session?.user?.id ?? userId ?? "guest-user-00000000-0000-0000-0000-000000000000",
@@ -94,8 +95,9 @@ export function Chat({
 
   // Sync threadId with URL id when navigating between chats
   useEffect(() => {
-    setThreadId(id && isValidConvexThreadId(id) ? id : null);
-  }, [id, isValidConvexThreadId]);
+    const newThreadId = id && isValidConvexThreadId(id) ? id : null;
+    setThreadId(newThreadId);
+  }, [id]);
 
   const createThread = useAction(api.chat.createNewThread);
   // Use streamMessage for realtime streaming with Convex
@@ -165,13 +167,16 @@ export function Chat({
 
   // Use safe wrapper that handles undefined paginated results
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { results: messages, status } = useUIMessages(
+  const { results: rawMessages, status } = useUIMessages(
     api.chatDb.listMessages as any,
     threadId ? { threadId } : "skip",
     { initialNumItems: 50, stream: true }
   );
-
   
+  // Ensure messages is always an array and handle loading state
+  const messages = rawMessages ?? [];
+  const isLoadingMessages = status === "LoadingFirstPage";
+
   // Check if the last message is still streaming (message.status === "streaming")
   const isStreamingResponse = useMemo(() => {
     if (!messages || messages.length === 0) return false;
@@ -247,7 +252,7 @@ export function Chat({
         abortControllerRef.current = null;
       }
     },
-    [threadId, createThread, streamMessage, userId, selectedModel, uploadFiles]
+    [threadId, createThread, streamMessage, effectiveUserId, selectedModel, uploadFiles]
   );
 
   const handleStop = useCallback(() => {
@@ -264,33 +269,6 @@ export function Chat({
   // Note: The 'id' prop is a page identifier (UUID), not a Convex thread ID.
   // Thread ID is set when a conversation is created via createThread action.
 
-  // Helper to extract reasoning text from message parts
-  // @convex-dev/agent uses { type: "reasoning", text: "...", state: "done" }
-  const getReasoningFromParts = (parts: any[] | undefined) => {
-    if (!parts) return undefined;
-    const reasoningPart = parts.find((p: any) => p.type === "reasoning");
-    return reasoningPart?.text; // Note: text field, not reasoning field
-  };
-
-  // Helper to extract tool invocations from message parts
-  // @convex-dev/agent uses type: "tool-<toolName>" format (e.g., "tool-createDocument")
-  const getToolInvocations = (parts: any[] | undefined, messageId?: string) => {
-    if (!parts) return [];
-    return parts
-      .filter((p: any) => typeof p.type === "string" && p.type.startsWith("tool-"))
-      .map((p: any, idx: number) => ({
-        // Extract toolName from "tool-<toolName>"
-        toolName: p.type.replace("tool-", ""),
-        // Create unique key: prefer toolCallId, fallback to message+index combo
-        toolCallId: p.toolCallId || `${messageId || "msg"}-tool-${idx}-${Date.now()}`,
-        state: p.state, // "input-available", "output-available", "output-error"
-        args: p.input, // @convex-dev/agent uses "input" not "args"
-        result: p.output, // @convex-dev/agent uses "output" not "result"
-        input: p.input,
-        output: p.output,
-      }));
-  };
-
   // Check if user is signed out - show banner if no authenticated user
   const isSignedOut = !session?.user?.id;
   
@@ -302,12 +280,22 @@ export function Chat({
     <div className="flex flex-col justify-between items-center gap-4 w-full h-full min-w-0">
       <Conversation className="flex-1 w-full">
         <ConversationContent className="flex flex-col gap-4 w-full items-center px-4">
-          {messages.length === 0 && <Overview />}
+          {messages.length === 0 && !isLoadingMessages && !threadId && <Overview />}
+          
+          {/* Show loading indicator when fetching existing thread messages */}
+          {isLoadingMessages && threadId && (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <span>Loading conversation...</span>
+              </div>
+            </div>
+          )}
 
           {messages.map((message, index) => {
             const isLastMessage = index === messages.length - 1;
             const messageIsStreaming = isLastMessage && message.role === "assistant" && isStreamingResponse;
-            // Cast message to access id and text properties
+            // Cast message to access id and parts properties
             const msg = message as any;
 
             return (
@@ -315,10 +303,8 @@ export function Chat({
                 key={msg.id || index}
                 chatId={threadId || id}
                 role={message.role}
-                content={msg.text || ""}
-                toolInvocations={getToolInvocations(message.parts, msg.id)}
+                parts={msg.parts}
                 attachments={[]}
-                reasoning={getReasoningFromParts(message.parts)}
                 isStreaming={messageIsStreaming}
               />
             );

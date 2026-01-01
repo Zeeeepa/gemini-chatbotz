@@ -10,13 +10,13 @@ const baseOpenRouter = createOpenRouter({
 // Wrapper that applies Gemini 3 middleware for thought signature preservation
 export const openrouter = (modelId: string, options?: Parameters<typeof baseOpenRouter>[1]) => {
   const model = baseOpenRouter(modelId, options);
-  
+
   // Apply Gemini 3 middleware for thought signature handling
   if (isGemini3Model(modelId)) {
     console.log(`[OpenRouter] Applying Gemini 3 middleware for ${modelId}`);
     return wrapWithGemini3Support(model);
   }
-  
+
   return model;
 };
 
@@ -106,7 +106,7 @@ export const OPENROUTER_MODELS: ModelDefinition[] = [
   {
     id: "moonshotai/kimi-k2-thinking",
     name: "Kimi K2 Thinking",
-    provider: "MoonshotAI",
+    provider: "Nvidia",
     description: "Advanced long-context reasoning model (see OpenRouter for pricing)",
     contextLength: 256000,
     maxOutput: 4096,
@@ -357,7 +357,7 @@ export const OPENROUTER_MODELS: ModelDefinition[] = [
   },
 ];
 
-export const DEFAULT_MODEL: OpenRouterModelId = "openai/gpt-5.2";
+export const DEFAULT_MODEL: OpenRouterModelId = "moonshotai/kimi-k2-thinking";
 export const DEFAULT_FAST_MODEL: OpenRouterModelId = "openai/gpt-4o-mini";
 export const DEFAULT_ARTIFACT_MODEL: OpenRouterModelId = "anthropic/claude-3.5-sonnet";
 

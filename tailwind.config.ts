@@ -9,8 +9,9 @@ const config: Config = {
   ],
   theme: {
     fontFamily: {
-      sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+      sans: ["Sohne", "var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
       mono: [
+        "Sohne Mono",
         "var(--font-mono)",
         "ui-monospace",
         "SFMono-Regular",

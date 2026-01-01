@@ -68,7 +68,8 @@ export const History = ({ user }: { user?: MinimalUser | null }) => {
       await deleteThreadMutation({ threadId: deleteId });
       toast.success("Chat deleted successfully");
     } catch (error) {
-      toast.error("Failed to delete chat");
+      console.error("Failed to delete chat:", error);
+      toast.error(`Failed to delete chat: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
     
     setShowDeleteDialog(false);
@@ -152,8 +153,7 @@ export const History = ({ user }: { user?: MinimalUser | null }) => {
                 </div>
               ) : null}
 
-              {history &&
-                history.map((thread) => (
+              {history?.map((thread) => (
                   <div
                     key={thread.threadId}
                     className={cx(

@@ -1,10 +1,16 @@
 import { Agent, createTool } from "@convex-dev/agent";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { createOpenAI } from "@ai-sdk/openai";
 import { components, internal, api } from "./_generated/api";
 import { z } from "zod";
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
+});
+
+const nvidia = createOpenAI({
+  baseURL: "https://integrate.api.nvidia.com/v1",
+  apiKey: process.env.NVIDIA_API_KEY,
 });
 
 const artifactKinds = ["text", "code", "sheet"] as const;
@@ -805,17 +811,18 @@ const baseTools = {
     },
   }),
   generateImage: createTool({
-    description: "Generate an image based on a text prompt using AI",
+    description: "Generate an image based on a text prompt using AI. Creates high-quality images from text descriptions.",
     args: z.object({
       prompt: z.string().describe("Detailed description of the image to generate"),
       style: z.enum(["realistic", "artistic", "cartoon", "sketch"]).optional().describe("Style of the generated image"),
     }),
-    handler: async (_ctx, { prompt, style }) => {
-      return {
+    handler: async (ctx, { prompt, style }) => {
+      // Call the actual image generation action
+      const result = await ctx.runAction(internal.actions.generateImageWithNanoBanana, {
         prompt,
         style: style || "realistic",
-        message: "Image generation requested. (Feature requires additional setup)",
-      };
+      });
+      return result;
     },
   }),
   webSearch: exaSearch,
@@ -1530,9 +1537,12 @@ export function createAgentWithModel(modelId: OpenRouterModelId) {
   // preserves signature fields in @convex-dev/agent's message serialization.
   const isGeminiFlash = modelId === "google/gemini-3-flash-preview";
   const isMinimax = modelId.startsWith("minimax/");
+  const isNvidiaKimi = modelId === "moonshotai/kimi-k2-thinking";
 
   // Gemini 3 models have built-in thinking - no extra config needed
-  const languageModel = openrouter(modelId);
+  const languageModel = isNvidiaKimi
+    ? nvidia.chat(modelId)
+    : openrouter(modelId);
 
   // MiniMax models - include coding and search tools, exclude complex multi-step flight tools
   const minimaxTools = {

@@ -147,12 +147,14 @@ function CodeContent({
   title,
   onSave,
   isReadonly = false,
+  documentId,
 }: { 
   content: string; 
   language: string;
   title?: string;
   onSave?: (content: string) => void;
   isReadonly?: boolean;
+  documentId?: string;
 }) {
   const [localContent, setLocalContent] = useState(content);
   const [activeTab, setActiveTab] = useState<"code" | "preview" | "console">("code");
@@ -217,6 +219,7 @@ function CodeContent({
     return (
       <div className="flex flex-col h-full">
         <SandboxProvider
+          key={documentId || content.slice(0, 50)}
           template={getTemplate()}
           files={{
             [getFilename()]: localContent,
@@ -544,6 +547,7 @@ function PureArtifactPanel({
             title={artifact.title}
             onSave={handleContentSave}
             isReadonly={isReadonly || artifact.status === "streaming"}
+            documentId={artifact.documentId}
           />
         ) : artifact.kind === "sheet" ? (
           <div className="p-4 h-full overflow-auto">

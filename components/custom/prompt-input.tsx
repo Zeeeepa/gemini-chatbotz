@@ -265,7 +265,7 @@ function RichTextEditor({
                   aria-label="Message input"
                   title="Type your message here"
                   translate="no"
-                  className="relative min-h-[48px] whitespace-pre-wrap break-words text-[15px] text-foreground outline-none"
+                  className="relative min-h-[48px] max-h-[200px] overflow-y-auto whitespace-pre-wrap break-words text-[15px] text-foreground outline-none"
                   onInput={handleInput}
                   onKeyDown={handleKeyDown}
                   onFocus={() => setIsFocused(true)}

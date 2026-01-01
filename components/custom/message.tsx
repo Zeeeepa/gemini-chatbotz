@@ -10,12 +10,23 @@ import { PreviewAttachment } from "./preview-attachment";
 import { ToolView } from "./tool-views";
 import { Reasoning, ReasoningTrigger, ReasoningContent } from "../ai-elements/reasoning";
 import { StreamingIndicator } from "../ai-elements/thinking-message";
+import BlurFade from "../ui/blur-fade";
 
 // Types for attachments and tool invocations
 interface MessageAttachment {
   url: string;
   name?: string;
   contentType?: string;
+}
+
+// Message part from @convex-dev/agent - can be text, tool, or reasoning
+interface MessagePart {
+  type: string;
+  text?: string;
+  toolCallId?: string;
+  state?: string;
+  input?: Record<string, unknown>;
+  output?: unknown;
 }
 
 // Tool invocation format from @convex-dev/agent
@@ -56,20 +67,75 @@ function getToolStatus(part: MessageToolInvocation): "pending" | "running" | "co
 
 export const Message = memo(({
   role,
-  content,
-  toolInvocations,
+  parts,
   attachments,
-  reasoning,
   isStreaming = false,
 }: {
   chatId?: string;
   role: string;
-  content: string | ReactNode;
-  toolInvocations: Array<MessageToolInvocation> | undefined;
+  parts?: Array<MessagePart>;
   attachments?: Array<MessageAttachment>;
-  reasoning?: string;
   isStreaming?: boolean;
 }) => {
+  // Render parts in order - interleaving text and tool calls as they appear
+  const renderParts = () => {
+    if (!parts || parts.length === 0) return null;
+    
+    return parts.map((part, index) => {
+      const key = part.toolCallId || `part-${index}`;
+      
+      // Reasoning part
+      if (part.type === "reasoning" && part.text?.trim()) {
+        return (
+          <Reasoning key={key} isStreaming={isStreaming && index === parts.length - 1} defaultOpen={isStreaming}>
+            <ReasoningTrigger />
+            <ReasoningContent>{part.text}</ReasoningContent>
+          </Reasoning>
+        );
+      }
+      
+      // Text part
+      if (part.type === "text" && part.text) {
+        const isLastPart = index === parts.length - 1;
+        return (
+          <div key={key} className="text-chocolate-800 dark:text-chocolate-300 flex flex-col gap-4 prose prose-sm dark:prose-invert max-w-none">
+            <Streamdown>{part.text}</Streamdown>
+            {isStreaming && isLastPart && <StreamingIndicator />}
+          </div>
+        );
+      }
+      
+      // Tool part - type is "tool-<toolName>"
+      if (part.type?.startsWith("tool-")) {
+        const toolName = part.type.replace("tool-", "");
+        const toolInvocation: MessageToolInvocation = {
+          toolName,
+          toolCallId: part.toolCallId || key,
+          state: part.state,
+          input: part.input,
+          output: part.output,
+        };
+        const status = getToolStatus(toolInvocation);
+        const args = part.input || {};
+        const result = part.output;
+
+        // Wrap tool views with BlurFade animation (BrowseGPT pattern)
+        return (
+          <BlurFade key={key} delay={index * 0.05}>
+            <ToolView
+              toolName={toolName}
+              args={args}
+              result={result as Record<string, unknown> | undefined}
+              status={status}
+            />
+          </BlurFade>
+        );
+      }
+      
+      return null;
+    });
+  };
+
   return (
     <motion.div
       className={`flex flex-row gap-4 px-4 w-full md:w-[600px] md:px-0 first-of-type:pt-20`}
@@ -81,44 +147,8 @@ export const Message = memo(({
       </div>
 
       <div className="flex flex-col gap-2 w-full">
-        {/* Reasoning/Thinking section */}
-        {reasoning && reasoning.trim().length > 0 && (
-          <Reasoning isStreaming={isStreaming} defaultOpen={isStreaming}>
-            <ReasoningTrigger />
-            <ReasoningContent>{reasoning}</ReasoningContent>
-          </Reasoning>
-        )}
-
-        {/* Main content with streaming support */}
-        {content && typeof content === "string" && (
-          <div className="text-chocolate-800 dark:text-chocolate-300 flex flex-col gap-4 prose prose-sm dark:prose-invert max-w-none">
-            <Streamdown>{content}</Streamdown>
-            {isStreaming && <StreamingIndicator />}
-          </div>
-        )}
-
-        {/* Tool invocations */}
-        {toolInvocations && toolInvocations.length > 0 && (
-          <div className="flex flex-col gap-4">
-            {toolInvocations.map((toolInvocation) => {
-              const { toolName, toolCallId } = toolInvocation;
-              const status = getToolStatus(toolInvocation);
-              // Support both args/result (AI SDK) and input/output (@convex-dev/agent) formats
-              const args = toolInvocation.args || toolInvocation.input || {};
-              const result = toolInvocation.result || toolInvocation.output;
-
-              return (
-                <ToolView
-                  key={toolCallId}
-                  toolName={toolName}
-                  args={args}
-                  result={result as Record<string, unknown> | undefined}
-                  status={status}
-                />
-              );
-            })}
-          </div>
-        )}
+        {/* Render all parts in order - text, tools, and reasoning interleaved */}
+        {renderParts()}
 
         {/* Attachments */}
         {attachments && attachments.length > 0 && (
