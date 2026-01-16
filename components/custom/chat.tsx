@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUIMessages } from "@convex-dev/agent/react";
@@ -284,77 +284,104 @@ export function Chat({
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
 
   // Determine if we have messages (for centered vs bottom input layout)
-  // Only count isLoadingMessages when we have a threadId (loading existing conversation)
-  // isLoading (sending new message) should move input to bottom immediately
-  const hasMessages = messages.length > 0 || (isLoadingMessages && !!threadId);
+  // Move to bottom immediately when:
+  // - We have actual messages
+  // - We're loading an existing conversation (threadId exists)
+  // - User has submitted a message (isLoading) - this ensures smooth transition
+  const hasMessages = messages.length > 0 || (isLoadingMessages && !!threadId) || isLoading;
 
   // Messages panel content - extracted for reuse in both mobile and desktop layouts
-  // Uses sparka-style centered-to-bottom transition:
-  // - Empty state: Input centered on page with Overview above
-  // - Has messages: Messages scroll area + input fixed at bottom
+  // Uses sparka-style centered-to-bottom transition with smooth animations
   const MessagesContent = (
     <div className="flex flex-col w-full h-full min-w-0">
-      {/* Messages area - only shown when there are messages */}
-      {hasMessages && (
-        <Conversation className="flex-1 min-h-0 w-full">
-          <ConversationContent className="flex flex-col gap-4 w-full items-center px-4">
-            {/* Show loading indicator when fetching existing thread messages */}
-            {isLoadingMessages && threadId && (
-              <div className="flex items-center justify-center py-8">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  <span>Loading conversation...</span>
-                </div>
-              </div>
-            )}
+      {/* Messages area - animates in when messages exist */}
+      <AnimatePresence mode="wait">
+        {hasMessages && (
+          <motion.div
+            key="messages-area"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="flex-1 min-h-0 w-full"
+          >
+            <Conversation className="h-full w-full">
+              <ConversationContent className="flex flex-col gap-4 w-full items-center px-4">
+                {/* Show loading indicator when fetching existing thread messages */}
+                {isLoadingMessages && threadId && (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      <span>Loading conversation...</span>
+                    </div>
+                  </div>
+                )}
 
-            {messages.map((message, index) => {
-              const isLastMessage = index === messages.length - 1;
-              const messageIsStreaming = isLastMessage && message.role === "assistant" && isStreamingResponse;
-              // Cast message to access id and parts properties
-              const msg = message as any;
+                {messages.map((message, index) => {
+                  const isLastMessage = index === messages.length - 1;
+                  const messageIsStreaming = isLastMessage && message.role === "assistant" && isStreamingResponse;
+                  const msg = message as any;
+                  const messageAttachments = msg.attachments || msg.files || msg.images || [];
+                  
+                  return (
+                    <motion.div
+                      key={msg.id || index}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                      className="w-full"
+                    >
+                      <PreviewMessage
+                        chatId={threadId || id}
+                        role={message.role}
+                        parts={msg.parts}
+                        attachments={messageAttachments}
+                        isStreaming={messageIsStreaming}
+                      />
+                    </motion.div>
+                  );
+                })}
 
-              // Extract attachments from message data if present
-              const messageAttachments = msg.attachments || msg.files || msg.images || [];
-              
-              return (
-                <PreviewMessage
-                  key={msg.id || index}
-                  chatId={threadId || id}
-                  role={message.role}
-                  parts={msg.parts}
-                  attachments={messageAttachments}
-                  isStreaming={messageIsStreaming}
-                />
-              );
-            })}
+                {/* Show thinking indicator when waiting for first response */}
+                {isLoading && !isStreamingResponse && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ThinkingMessage />
+                  </motion.div>
+                )}
 
-            {/* Show thinking indicator when waiting for first response */}
-            {isLoading && !isStreamingResponse && (
-              <ThinkingMessage />
-            )}
+                <div className="shrink-0 min-w-[24px] min-h-[24px]" />
+              </ConversationContent>
+              <ConversationScrollButton />
+            </Conversation>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            <div className="shrink-0 min-w-[24px] min-h-[24px]" />
-          </ConversationContent>
-          <ConversationScrollButton />
-        </Conversation>
-      )}
-
-      {/* Input container - centered when empty, bottom when has messages */}
-      <div
+      {/* Input container - smoothly transitions from center to bottom */}
+      <motion.div
+        layout
+        transition={{
+          layout: { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
+        }}
         className={cn(
           "z-10 w-full",
           hasMessages
-            ? "relative shrink-0" // Bottom-aligned when messages exist
-            : "flex min-h-0 flex-1 items-center justify-center -mt-12" // Centered when empty, offset navbar
+            ? "relative shrink-0"
+            : "flex min-h-0 flex-1 items-center justify-center -mt-12"
         )}
       >
-        <div
+        <motion.div
+          layout
+          transition={{
+            layout: { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
+          }}
           className={cn(
             "mx-auto w-full p-4",
-            hasMessages
-              ? "pb-4 md:pb-6" // Standard padding when at bottom
-              : "", // No extra padding needed - -mt-12 handles centering offset
+            hasMessages ? "pb-4 md:pb-6" : "",
             !isArtifactVisible && "md:max-w-3xl"
           )}
         >
@@ -369,14 +396,23 @@ export function Chat({
             isCompact={isArtifactVisible}
           />
           {/* Show suggested actions below input only in empty state */}
-          {!hasMessages && !threadId && (
-            <SuggestedActions
-              className="mt-4"
-              onSendPrompt={(prompt) => handleSubmit(prompt)}
-            />
-          )}
-        </div>
-      </div>
+          <AnimatePresence>
+            {!hasMessages && !threadId && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <SuggestedActions
+                  className="mt-4"
+                  onSendPrompt={(prompt) => handleSubmit(prompt)}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </motion.div>
     </div>
   );
 

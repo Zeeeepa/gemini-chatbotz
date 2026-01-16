@@ -442,16 +442,6 @@ function RichTextEditor({
                   </button>
                   <button
                     type="button"
-                    onClick={handleCursorClick}
-                    title="New Code"
-                    aria-label="New Code"
-                    disabled={isDisabled}
-                    className={cn(iconButtonClass, "hidden sm:inline-flex")}
-                  >
-                    <MousePointer2 className="h-[18px] w-[18px]" />
-                  </button>
-                  <button
-                    type="button"
                     onClick={handleDocumentClick}
                     title="New Document"
                     aria-label="New Document"
