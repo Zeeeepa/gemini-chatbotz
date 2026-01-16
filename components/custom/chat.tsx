@@ -329,7 +329,7 @@ export function Chat({
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, ease: "easeOut" }}
-                      className="w-full"
+                      className="w-full max-w-3xl"
                     >
                       <PreviewMessage
                         chatId={threadId || id}
@@ -348,6 +348,7 @@ export function Chat({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
+                    className="w-full max-w-3xl"
                   >
                     <ThinkingMessage />
                   </motion.div>
