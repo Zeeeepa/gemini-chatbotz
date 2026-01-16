@@ -9,7 +9,8 @@ const baseFireworks = createFireworks({
 export const fireworks = baseFireworks;
 
 export type FireworksModelId =
-  | "accounts/fireworks/models/minimax-m2p1";
+  | "accounts/fireworks/models/minimax-m2p1"
+  | "accounts/fireworks/models/glm-4p7";
 
 export interface ModelDefinition {
   id: FireworksModelId;
@@ -26,6 +27,7 @@ export interface ModelDefinition {
     vision?: boolean;
     functionCalling?: boolean;
     streaming?: boolean;
+    reasoning?: boolean;
   };
 }
 
@@ -39,6 +41,16 @@ export const FIREWORKS_MODELS: ModelDefinition[] = [
     maxOutput: 25600,
     pricing: { prompt: 0.0003, completion: 0.0012 },
     capabilities: { functionCalling: true, streaming: true },
+  },
+  {
+    id: "accounts/fireworks/models/glm-4p7",
+    name: "GLM-4.7",
+    provider: "Fireworks (Z.ai)",
+    description: "352.8B parameter MoE model optimized for coding, reasoning, and agentic workflows with advanced thinking controls (interleaved, preserved, turn-level)",
+    contextLength: 202800,
+    maxOutput: 50000,
+    pricing: { prompt: 0.0006, completion: 0.0022 },
+    capabilities: { functionCalling: true, streaming: true, reasoning: true },
   },
 ];
 

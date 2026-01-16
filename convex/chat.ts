@@ -47,7 +47,8 @@ const modelValidator = v.optional(v.union(
   v.literal("z-ai/glm-4.6v"),
   v.literal("z-ai/glm-4.7"),
   v.literal("qwen/qwen3-vl-235b-a22b-instruct"),
-  v.literal("accounts/fireworks/models/minimax-m2p1")
+  v.literal("accounts/fireworks/models/minimax-m2p1"),
+  v.literal("accounts/fireworks/models/glm-4p7")
 ));
 
 // File attachment validator for PDF, images, etc.
@@ -168,8 +169,35 @@ export const sendMessage = action({
       effectiveThreadId,
       modelId,
       fullPrompt,
-      async () => thread.generateText({ prompt: fullPrompt } as any)
+      async () => thread.generateText(
+        { prompt: fullPrompt } as any,
+        { storageOptions: { saveMessages: "promptAndOutput" } }
+      )
     );
+
+    console.log(`[sendMessage] Saved messages count: ${result.savedMessages?.length || 0}`);
+    
+    // Verify messages were saved
+    if (!result.savedMessages || result.savedMessages.length === 0) {
+      console.warn(`[sendMessage] WARNING: No messages were saved automatically. Attempting manual save...`);
+      try {
+        // Manually save the user message
+        await agent.saveMessage(ctx, {
+          threadId: effectiveThreadId,
+          userId: userId ?? "anonymous",
+          message: { role: "user", content: fullPrompt },
+        });
+        // Manually save the assistant response
+        await agent.saveMessage(ctx, {
+          threadId: effectiveThreadId,
+          userId: userId ?? "anonymous",
+          message: { role: "assistant", content: result.text },
+        });
+        console.log(`[sendMessage] Manual message save completed`);
+      } catch (saveError) {
+        console.error(`[sendMessage] Manual save failed:`, saveError);
+      }
+    }
 
     if (userId) {
       await ctx.runMutation(api.chatDb.updateThreadTitle, {
@@ -221,10 +249,12 @@ export const streamMessage = action({
       }
       
       const { thread } = await agent.continueThread(ctx, { threadId: effectiveThreadId });
+      console.log(`[streamMessage] Continuing thread: ${effectiveThreadId}`);
 
       // PRE-ANALYZE files before sending to agent (avoids tool calling issues with Gemini 3 Pro)
       const fileAnalysis = attachments ? await preAnalyzeFiles(ctx, attachments, prompt) : "";
       const fullPrompt = prompt + fileAnalysis;
+      console.log(`[streamMessage] Full prompt length: ${fullPrompt.length} chars`);
 
       // Gemini models can have transient provider errors - add retry logic
       const isGeminiModel = modelId?.startsWith("google/gemini");
@@ -243,9 +273,38 @@ export const streamMessage = action({
             fullPrompt,
             async () => thread.streamText(
               { prompt: fullPrompt } as any,
-              { saveStreamDeltas: { throttleMs: 100 } }
+              { 
+                saveStreamDeltas: { throttleMs: 100 },
+                storageOptions: { saveMessages: "promptAndOutput" }
+              }
             )
           );
+
+          const finalText = await result.text;
+          console.log(`[streamMessage] Stream completed. Text length: ${finalText.length} chars`);
+          console.log(`[streamMessage] Saved messages count: ${result.savedMessages?.length || 0}`);
+          
+          // Verify messages were saved
+          if (!result.savedMessages || result.savedMessages.length === 0) {
+            console.warn(`[streamMessage] WARNING: No messages were saved automatically. Attempting manual save...`);
+            try {
+              // Manually save the user message
+              await agent.saveMessage(ctx, {
+                threadId: effectiveThreadId,
+                userId: userId ?? "anonymous",
+                message: { role: "user", content: fullPrompt },
+              });
+              // Manually save the assistant response
+              await agent.saveMessage(ctx, {
+                threadId: effectiveThreadId,
+                userId: userId ?? "anonymous",
+                message: { role: "assistant", content: finalText },
+              });
+              console.log(`[streamMessage] Manual message save completed`);
+            } catch (saveError) {
+              console.error(`[streamMessage] Manual save failed:`, saveError);
+            }
+          }
 
           if (userId) {
             await ctx.runMutation(api.chatDb.updateThreadTitle, {
@@ -254,7 +313,7 @@ export const streamMessage = action({
             });
           }
           return {
-            text: await result.text,
+            text: finalText,
             attachments: attachments || [],
           };
         } catch (error) {

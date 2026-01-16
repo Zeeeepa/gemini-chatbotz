@@ -18,12 +18,14 @@ import type * as cortexFacts from "../cortexFacts.js";
 import type * as cortexMemories from "../cortexMemories.js";
 import type * as cortexMemorySpaces from "../cortexMemorySpaces.js";
 import type * as crons from "../crons.js";
+import type * as debugMessages from "../debugMessages.js";
 import type * as deepcrawl from "../deepcrawl.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as hyperbrowser from "../hyperbrowser.js";
 import type * as mcp from "../mcp.js";
 import type * as reservations from "../reservations.js";
+import type * as testGLM47 from "../testGLM47.js";
 import type * as todos from "../todos.js";
 
 import type {
@@ -43,12 +45,14 @@ declare const fullApi: ApiFromModules<{
   cortexMemories: typeof cortexMemories;
   cortexMemorySpaces: typeof cortexMemorySpaces;
   crons: typeof crons;
+  debugMessages: typeof debugMessages;
   deepcrawl: typeof deepcrawl;
   files: typeof files;
   http: typeof http;
   hyperbrowser: typeof hyperbrowser;
   mcp: typeof mcp;
   reservations: typeof reservations;
+  testGLM47: typeof testGLM47;
   todos: typeof todos;
 }>;
 

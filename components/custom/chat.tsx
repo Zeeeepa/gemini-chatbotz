@@ -13,6 +13,7 @@ import {
 } from "@/components/ai-elements/conversation";
 import { PromptInput } from "./prompt-input";
 import { Overview } from "./overview";
+import { SuggestedActions } from "./suggested-actions";
 import { DEFAULT_MODEL, type OpenRouterModelId } from "@/lib/ai/openrouter";
 import { ThinkingMessage } from "@/components/ai-elements/thinking-message";
 import { toast } from "sonner";
@@ -282,76 +283,110 @@ export function Chat({
   // Get artifact visibility state for split layout
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
 
+  // Determine if we have messages (for centered vs bottom input layout)
+  // Only count isLoadingMessages when we have a threadId (loading existing conversation)
+  // isLoading (sending new message) should move input to bottom immediately
+  const hasMessages = messages.length > 0 || (isLoadingMessages && !!threadId);
+
   // Messages panel content - extracted for reuse in both mobile and desktop layouts
+  // Uses sparka-style centered-to-bottom transition:
+  // - Empty state: Input centered on page with Overview above
+  // - Has messages: Messages scroll area + input fixed at bottom
   const MessagesContent = (
-    <div className="flex flex-col justify-between items-center gap-4 w-full h-full min-w-0">
-      <Conversation className="flex-1 w-full">
-        <ConversationContent className="flex flex-col gap-4 w-full items-center px-4">
-          {messages.length === 0 && !isLoadingMessages && !threadId && <Overview />}
-          
-          {/* Show loading indicator when fetching existing thread messages */}
-          {isLoadingMessages && threadId && (
-            <div className="flex items-center justify-center py-8">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                <span>Loading conversation...</span>
+    <div className="flex flex-col w-full h-full min-w-0">
+      {/* Messages area - only shown when there are messages */}
+      {hasMessages && (
+        <Conversation className="flex-1 min-h-0 w-full">
+          <ConversationContent className="flex flex-col gap-4 w-full items-center px-4">
+            {/* Show loading indicator when fetching existing thread messages */}
+            {isLoadingMessages && threadId && (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <span>Loading conversation...</span>
+                </div>
               </div>
-            </div>
+            )}
+
+            {messages.map((message, index) => {
+              const isLastMessage = index === messages.length - 1;
+              const messageIsStreaming = isLastMessage && message.role === "assistant" && isStreamingResponse;
+              // Cast message to access id and parts properties
+              const msg = message as any;
+
+              // Extract attachments from message data if present
+              const messageAttachments = msg.attachments || msg.files || msg.images || [];
+              
+              return (
+                <PreviewMessage
+                  key={msg.id || index}
+                  chatId={threadId || id}
+                  role={message.role}
+                  parts={msg.parts}
+                  attachments={messageAttachments}
+                  isStreaming={messageIsStreaming}
+                />
+              );
+            })}
+
+            {/* Show thinking indicator when waiting for first response */}
+            {isLoading && !isStreamingResponse && (
+              <ThinkingMessage />
+            )}
+
+            <div className="shrink-0 min-w-[24px] min-h-[24px]" />
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
+      )}
+
+      {/* Input container - centered when empty, bottom when has messages */}
+      <div
+        className={cn(
+          "z-10 w-full",
+          hasMessages
+            ? "relative shrink-0" // Bottom-aligned when messages exist
+            : "flex min-h-0 flex-1 items-center justify-center -mt-12" // Centered when empty, offset navbar
+        )}
+      >
+        <div
+          className={cn(
+            "mx-auto w-full p-4",
+            hasMessages
+              ? "pb-4 md:pb-6" // Standard padding when at bottom
+              : "", // No extra padding needed - -mt-12 handles centering offset
+            !isArtifactVisible && "md:max-w-3xl"
           )}
-
-          {messages.map((message, index) => {
-            const isLastMessage = index === messages.length - 1;
-            const messageIsStreaming = isLastMessage && message.role === "assistant" && isStreamingResponse;
-            // Cast message to access id and parts properties
-            const msg = message as any;
-
-            // Extract attachments from message data if present
-            const messageAttachments = msg.attachments || msg.files || msg.images || [];
-            
-            return (
-              <PreviewMessage
-                key={msg.id || index}
-                chatId={threadId || id}
-                role={message.role}
-                parts={msg.parts}
-                attachments={messageAttachments}
-                isStreaming={messageIsStreaming}
-              />
-            );
-          })}
-
-          {/* Show thinking indicator when waiting for first response */}
-          {isLoading && !isStreamingResponse && (
-            <ThinkingMessage />
+        >
+          <PromptInput
+            onSubmit={handleSubmit}
+            onStop={handleStop}
+            isLoading={isLoading || isStreamingResponse || isUploading}
+            isStreaming={isStreamingResponse}
+            placeholder={isUploading ? "Uploading files..." : "Ask about flights, weather, code, or upload a PDF..."}
+            selectedModel={selectedModel}
+            onModelChange={handleModelChange}
+            isCompact={isArtifactVisible}
+          />
+          {/* Show suggested actions below input only in empty state */}
+          {!hasMessages && !threadId && (
+            <SuggestedActions
+              className="mt-4"
+              onSendPrompt={(prompt) => handleSubmit(prompt)}
+            />
           )}
-
-          <div className="shrink-0 min-w-[24px] min-h-[24px]" />
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
-
-      <div className={cn(
-        "w-full px-4 pb-4",
-        !isArtifactVisible && "md:max-w-[858px] md:px-0"
-      )}>
-        <PromptInput
-          onSubmit={handleSubmit}
-          onStop={handleStop}
-          isLoading={isLoading || isStreamingResponse || isUploading}
-          isStreaming={isStreamingResponse}
-          placeholder={isUploading ? "Uploading files..." : "Ask about flights, weather, code, or upload a PDF..."}
-          selectedModel={selectedModel}
-          onModelChange={handleModelChange}
-          isCompact={isArtifactVisible}
-        />
+        </div>
       </div>
     </div>
   );
 
   return (
-    <div className="flex flex-col h-dvh bg-background pt-12">
-      {/* Sign-in banner for signed-out users - positioned below navbar */}
-      {isSignedOut && (
+    <div className={cn(
+      "flex flex-col h-dvh bg-background",
+      hasMessages ? "pt-12" : "pt-12" // Keep navbar space but center content within remaining area
+    )}>
+      {/* Sign-in banner for signed-out users - only show when there are messages */}
+      {isSignedOut && hasMessages && (
         <div className="flex w-full items-center justify-center md:justify-between gap-3 bg-gradient-to-r from-chocolate-600 to-chocolate-500 px-4 md:px-6 py-3 text-white shrink-0 shadow-md z-20">
           <div className="flex items-center gap-3">
             <div className="hidden md:flex rounded-full border border-white/20 bg-white/10 p-2 shadow-sm">

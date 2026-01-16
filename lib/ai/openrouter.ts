@@ -53,7 +53,8 @@ export type OpenRouterModelId =
   | "z-ai/glm-4.6v"
   | "z-ai/glm-4.7"
   | "qwen/qwen3-vl-235b-a22b-instruct"
-  | "accounts/fireworks/models/minimax-m2p1";
+  | "accounts/fireworks/models/minimax-m2p1"
+  | "accounts/fireworks/models/glm-4p7";
 
 export interface ModelDefinition {
   id: OpenRouterModelId;
@@ -364,6 +365,16 @@ export const OPENROUTER_MODELS: ModelDefinition[] = [
     contextLength: 200000,
     maxOutput: 25600,
     pricing: { prompt: 0.0003, completion: 0.0012 },
+    capabilities: { functionCalling: true, streaming: true },
+  },
+  {
+    id: "accounts/fireworks/models/glm-4p7",
+    name: "GLM-4.7 (Fireworks)",
+    provider: "Fireworks",
+    description: "352.8B parameter MoE model optimized for coding, reasoning, and agentic workflows with advanced thinking controls via Fireworks",
+    contextLength: 202800,
+    maxOutput: 50000,
+    pricing: { prompt: 0.0006, completion: 0.0022 },
     capabilities: { functionCalling: true, streaming: true },
   },
 ];

@@ -51,7 +51,8 @@ type OpenRouterModelId =
   | "z-ai/glm-4.6v"
   | "z-ai/glm-4.7"
   | "qwen/qwen3-vl-235b-a22b-instruct"
-  | "accounts/fireworks/models/minimax-m2p1";
+  | "accounts/fireworks/models/minimax-m2p1"
+  | "accounts/fireworks/models/glm-4p7";
 
 const baseInstructions = `
 <core_identity>

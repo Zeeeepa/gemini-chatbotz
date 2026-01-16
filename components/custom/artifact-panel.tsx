@@ -19,6 +19,7 @@ import {
   Code,
   Eye,
   Terminal,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -226,18 +227,18 @@ function CodeContent({
           }}
         >
           <SandboxTabs defaultValue="code" value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-            <SandboxTabsList className="border-b border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900">
-              <SandboxTabsTrigger value="code" className="flex items-center gap-1.5">
+            <SandboxTabsList className="border-b border-chocolate-200 dark:border-chocolate-700 bg-chocolate-50 dark:bg-chocolate-900 flex-wrap">
+              <SandboxTabsTrigger value="code" className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3">
                 <Code className="w-3.5 h-3.5" />
-                Code
+                <span className="hidden sm:inline">Code</span>
               </SandboxTabsTrigger>
-              <SandboxTabsTrigger value="preview" className="flex items-center gap-1.5">
+              <SandboxTabsTrigger value="preview" className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3">
                 <Eye className="w-3.5 h-3.5" />
-                Preview
+                <span className="hidden sm:inline">Preview</span>
               </SandboxTabsTrigger>
-              <SandboxTabsTrigger value="console" className="flex items-center gap-1.5">
+              <SandboxTabsTrigger value="console" className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3">
                 <Terminal className="w-3.5 h-3.5" />
-                Console
+                <span className="hidden sm:inline">Console</span>
               </SandboxTabsTrigger>
             </SandboxTabsList>
             
@@ -498,7 +499,16 @@ function PureArtifactPanel({
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-chocolate-100 dark:border-chocolate-800 bg-chocolate-50/80 dark:bg-chocolate-900/80 backdrop-blur-sm shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          {/* Mobile back button */}
+          <button
+            type="button"
+            onClick={closeArtifact}
+            className="md:hidden p-1.5 -ml-1 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-chocolate-100 dark:hover:bg-chocolate-800 rounded-lg transition-colors"
+            title="Back to chat"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-chocolate-100 dark:bg-chocolate-800 text-neutral-700 dark:text-neutral-300">
             <KindIcon kind={artifact.kind} />
           </div>
