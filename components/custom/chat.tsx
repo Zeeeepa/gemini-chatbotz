@@ -306,7 +306,7 @@ export function Chat({
             className="flex-1 min-h-0 w-full"
           >
             <Conversation className="h-full w-full">
-              <ConversationContent className="flex flex-col gap-4 w-full items-center px-4">
+              <ConversationContent className="flex flex-col gap-4 w-full items-center">
                 {/* Show loading indicator when fetching existing thread messages */}
                 {isLoadingMessages && threadId && (
                   <div className="flex items-center justify-center py-8">
@@ -329,7 +329,7 @@ export function Chat({
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, ease: "easeOut" }}
-                      className="w-full max-w-3xl"
+                      className="w-full max-w-3xl px-4"
                     >
                       <PreviewMessage
                         chatId={threadId || id}
@@ -348,7 +348,7 @@ export function Chat({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="w-full max-w-3xl"
+                    className="w-full max-w-3xl px-4"
                   >
                     <ThinkingMessage />
                   </motion.div>
