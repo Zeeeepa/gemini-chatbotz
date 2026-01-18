@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAction } from "convex/react";
+import { useAction, usePaginationOpts } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUIMessages } from "@convex-dev/agent/react";
 import { Message as PreviewMessage } from "@/components/custom/message";
@@ -102,6 +102,9 @@ export function Chat({
     setThreadId(newThreadId);
   }, [id]);
 
+  // Get pagination options for loading messages from threads
+  const paginationOpts = usePaginationOpts(50);
+
   const createThread = useAction(api.chat.createNewThread);
   // Use streamMessage for realtime streaming with Convex
   const streamMessage = useAction(api.chat.streamMessage);
@@ -168,11 +171,18 @@ export function Chat({
     []
   );
 
-  // Use safe wrapper that handles undefined paginated results
+  // Load messages from the current thread with proper pagination and streaming
+  // Fix: Include required paginationOpts and streamArgs parameters for useUIMessages
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { results: rawMessages, status } = useUIMessages(
     api.chatDb.listMessages as any,
-    threadId ? { threadId } : "skip",
+    threadId
+      ? {
+          threadId,
+          paginationOpts,
+          streamArgs: { kind: "messages" },
+        }
+      : "skip",
     { initialNumItems: 50, stream: true }
   );
   
